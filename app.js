@@ -313,6 +313,38 @@ function formatDayLabel(date) {
   return { day, weekday };
 }
 
+// 날짜별 탭 HTML (오버레이 공통)
+function overlayDateStripHtml(dates, selectedDate, countFn) {
+  return `<div class="overlay-date-strip">` +
+    dates.map((date) => {
+      const { day, weekday } = formatDayLabel(date);
+      const count = countFn(date);
+      const active = date === selectedDate ? "active" : "";
+      return `<button class="permit-date ${active}" type="button" data-overlay-date="${date}">
+        <span>${weekday}</span>
+        <strong>${day}</strong>
+        <em>${count}</em>
+      </button>`;
+    }).join("") +
+  `</div>`;
+}
+
+// 날짜 탭 클릭 이벤트 바인딩 (오버레이 공통)
+function bindOverlayDateTabs(overlay, renderFn) {
+  overlay.querySelector(".overlay-date-strip")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-overlay-date]");
+    if (!btn) return;
+    const date = btn.dataset.overlayDate;
+    // 활성 탭 교체
+    overlay.querySelectorAll(".overlay-date-strip .permit-date").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    // 콘텐츠 교체
+    const contentEl = overlay.querySelector(".overlay-date-content");
+    if (contentEl) contentEl.innerHTML = renderFn(date);
+    // 새로 생긴 detail-trigger 이벤트 rebind은 bubbling으로 처리됨
+  });
+}
+
 function groupedByDistrict(items) {
   return items.reduce((groups, item) => {
     groups[item.district] = groups[item.district] || [];
@@ -813,29 +845,51 @@ function recordRowHtml(item) {
 function renderRecords() {
   const list = document.getElementById("recordList");
   const today = latestDealDate();
-  const sorted = transactions
+  const todayRecords = transactions
     .filter(isRecord)
+    .filter((t) => t.dealDate === today)
     .sort((a, b) => recordIncrease(b) - recordIncrease(a));
-  const todayRecords = sorted.filter((t) => t.dealDate === today);
-  const display = todayRecords.length ? todayRecords : sorted;
-  const top10 = display.slice(0, 10);
-  const remaining = display.length - 10;
+  const top10 = todayRecords.slice(0, 10);
+  const remaining = todayRecords.length - 10;
+
+  if (!todayRecords.length) {
+    list.innerHTML = `<div class="transaction-row"><div><h3>${today} 신고가 없음</h3><p>More View에서 날짜별 신고가를 확인하세요.</p></div></div>
+      <button class="more-view-btn" type="button" data-more-type="records">More View <span>날짜별 전체 보기</span></button>`;
+    return;
+  }
 
   list.innerHTML = top10.map(recordRowHtml).join("") + (remaining > 0 ? `
     <button class="more-view-btn" type="button" data-more-type="records">
       More View <span>+${remaining}건 더 보기</span>
     </button>
-  ` : "");
+  ` : `<button class="more-view-btn" type="button" data-more-type="records">More View <span>날짜별 전체 보기</span></button>`);
 }
 
 /* ── 전체 신고가 오버레이 ──────────────────────────────── */
 
+function renderRecordsByDate(date) {
+  const rows = transactions
+    .filter(isRecord)
+    .filter((t) => t.dealDate === date)
+    .sort((a, b) => recordIncrease(b) - recordIncrease(a));
+  if (!rows.length) return `<div class="transaction-row"><div><h3>${date} 신고가 없음</h3><p>해당 날짜에 신고가 거래가 없습니다.</p></div></div>`;
+  return rows.map(recordRowHtml).join("");
+}
+
 function openRecordsOverlay() {
   const overlay = document.getElementById("districtDetailOverlay");
   const today = latestDealDate();
-  const allRecords = transactions
-    .filter(isRecord)
-    .sort((a, b) => recordIncrease(b) - recordIncrease(a));
+  const allRecords = transactions.filter(isRecord);
+  const dates = [...new Set(allRecords.map((t) => t.dealDate))].sort((a, b) => b.localeCompare(a)).slice(0, 14);
+  const countFn = (d) => allRecords.filter((t) => t.dealDate === d).length;
+
+  // 전체 요약 (날짜 무관)
+  const sorted = [...allRecords].sort((a, b) => recordIncrease(b) - recordIncrease(a));
+  const topRecord = sorted[0];
+  const avgIncrease = sorted.length ? (sorted.reduce((s, t) => s + recordIncrease(t), 0) / sorted.length).toFixed(1) : 0;
+  const distCnt = {};
+  sorted.forEach((t) => { distCnt[t.district] = (distCnt[t.district] || 0) + 1; });
+  const topDist = Object.entries(distCnt).sort((a, b) => b[1] - a[1])[0];
 
   overlay.innerHTML = `
     <div class="dd-inner" style="grid-template-columns:1fr">
@@ -845,40 +899,36 @@ function openRecordsOverlay() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
             홈으로
           </button>
-          <span>›</span><span>신고가 전체</span>
+          <span>›</span><span>날짜별 신고가</span>
         </div>
         <div class="dd-title-row">
           <h2 class="dd-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            신고가 전체 내역
+            날짜별 신고가 내역
           </h2>
-          <span class="dd-date">${today} 기준 · 총 ${allRecords.length}건</span>
+          <span class="dd-date">전체 ${allRecords.length}건</span>
         </div>
-        <div class="dd-highlights" style="margin-top:20px">
+        <div class="dd-highlights" style="margin-top:16px">
           <div class="dd-highlight-card record">
             <div class="dd-hl-label">🔥 최고 상승률</div>
-            <div class="dd-hl-complex">${allRecords[0]?.complex ?? "-"}</div>
-            <div class="dd-hl-price">${formatPrice(allRecords[0]?.price ?? 0)}<span class="dd-hl-gap">+${recordIncrease(allRecords[0] ?? {})}%</span></div>
-            <div class="dd-hl-meta">${allRecords[0]?.district ?? ""} ${allRecords[0]?.dong ?? ""}</div>
+            <div class="dd-hl-complex">${topRecord?.complex ?? "-"}</div>
+            <div class="dd-hl-price">${formatPrice(topRecord?.price ?? 0)}<span class="dd-hl-gap">+${recordIncrease(topRecord ?? {})}%</span></div>
+            <div class="dd-hl-meta">${topRecord?.district ?? ""} ${topRecord?.dong ?? ""} · ${topRecord?.dealDate ?? ""}</div>
           </div>
           <div class="dd-highlight-card">
             <div class="dd-hl-label">📊 평균 상승률</div>
-            <div class="dd-hl-complex">신고가 ${allRecords.length}건</div>
-            <div class="dd-hl-price">${allRecords.length ? (allRecords.reduce((s, t) => s + recordIncrease(t), 0) / allRecords.length).toFixed(1) : 0}%</div>
+            <div class="dd-hl-complex">신고가 ${sorted.length}건</div>
+            <div class="dd-hl-price">${avgIncrease}%</div>
             <div class="dd-hl-meta">전체 신고가 평균</div>
           </div>
           <div class="dd-highlight-card">
-            <div class="dd-hl-label">📍 가장 많은 구</div>
-            ${(() => {
-              const cnt = {};
-              allRecords.forEach((t) => { cnt[t.district] = (cnt[t.district] || 0) + 1; });
-              const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
-              return top ? `<div class="dd-hl-complex">${top[0]}</div><div class="dd-hl-price">${top[1]}건</div><div class="dd-hl-meta">신고가 최다 발생 구</div>` : "";
-            })()}
+            <div class="dd-hl-label">📍 신고가 최다 구</div>
+            ${topDist ? `<div class="dd-hl-complex">${topDist[0]}</div><div class="dd-hl-price">${topDist[1]}건</div><div class="dd-hl-meta">신고가 최다 발생 구</div>` : ""}
           </div>
         </div>
-        <div class="dd-list" style="margin-top:16px">
-          ${allRecords.map(recordRowHtml).join("")}
+        ${overlayDateStripHtml(dates, today, countFn)}
+        <div class="overlay-date-content dd-list" style="margin-top:8px">
+          ${renderRecordsByDate(today)}
         </div>
       </div>
     </div>
@@ -886,16 +936,32 @@ function openRecordsOverlay() {
   overlay.removeAttribute("hidden");
   document.body.style.overflow = "hidden";
   document.getElementById("ddBackBtn").addEventListener("click", closeDistrictDetail);
+  bindOverlayDateTabs(overlay, renderRecordsByDate);
 }
 
 /* ── 오늘 실거래 전체 오버레이 ────────────────────────── */
 
+function renderTransactionsByDate(date) {
+  const rows = transactions
+    .filter((t) => t.dealDate === date)
+    .sort((a, b) => b.price - a.price);
+  if (!rows.length) return `<div class="transaction-row"><div><h3>${date} 거래 없음</h3><p>해당 날짜에 집계된 거래가 없습니다.</p></div></div>`;
+  return rows.map((item) => `
+    <button class="transaction-row detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="transaction">
+      <div>
+        <h3>${item.complex}</h3>
+        <p>${item.district} ${item.dong} · 전용 ${item.area.toFixed(1)}㎡ · ${item.floor}층</p>
+      </div>
+      <div class="amount">${formatPrice(item.price)}</div>
+    </button>
+  `).join("");
+}
+
 function openTransactionsOverlay() {
   const overlay = document.getElementById("districtDetailOverlay");
   const today = latestDealDate();
-  const todayAll = transactions
-    .filter((t) => t.dealDate === today)
-    .sort((a, b) => b.price - a.price);
+  const dates = [...new Set(transactions.map((t) => t.dealDate))].sort((a, b) => b.localeCompare(a)).slice(0, 14);
+  const countFn = (d) => transactions.filter((t) => t.dealDate === d).length;
 
   overlay.innerHTML = `
     <div class="dd-inner" style="grid-template-columns:1fr">
@@ -905,25 +971,17 @@ function openTransactionsOverlay() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
             홈으로
           </button>
-          <span>›</span><span>오늘의 실거래</span>
+          <span>›</span><span>날짜별 실거래</span>
         </div>
         <div class="dd-title-row">
           <h2 class="dd-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-            오늘의 실거래 전체
+            날짜별 실거래 전체
           </h2>
-          <span class="dd-date">${today} · 총 ${todayAll.length}건</span>
         </div>
-        <div class="dd-list" style="margin-top:20px">
-          ${todayAll.length ? todayAll.map((item) => `
-            <button class="transaction-row detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="transaction">
-              <div>
-                <h3>${item.complex}</h3>
-                <p>${item.district} ${item.dong} · 전용 ${item.area.toFixed(1)}㎡ · ${item.floor}층</p>
-              </div>
-              <div class="amount">${formatPrice(item.price)}</div>
-            </button>
-          `).join("") : `<div class="transaction-row"><div><h3>오늘 거래 없음</h3></div></div>`}
+        ${overlayDateStripHtml(dates, today, countFn)}
+        <div class="overlay-date-content dd-list" style="margin-top:8px">
+          ${renderTransactionsByDate(today)}
         </div>
       </div>
     </div>
@@ -931,13 +989,33 @@ function openTransactionsOverlay() {
   overlay.removeAttribute("hidden");
   document.body.style.overflow = "hidden";
   document.getElementById("ddBackBtn").addEventListener("click", closeDistrictDetail);
+  bindOverlayDateTabs(overlay, renderTransactionsByDate);
 }
 
 /* ── 토허구역 오버레이 ────────────────────────────────── */
 
+function renderPermitsByDate(date) {
+  const rows = permitTransactions()
+    .filter((t) => t.dealDate === date)
+    .sort((a, b) => b.price - a.price);
+  if (!rows.length) return `<div class="transaction-row"><div><h3>${date} 토허구역 거래 없음</h3><p>해당 날짜에 토지거래허가 거래가 없습니다.</p></div></div>`;
+  return rows.map((item) => `
+    <button class="transaction-row detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="permit">
+      <div>
+        <h3>${item.complex}</h3>
+        <p>${item.district} ${item.dong} · ${item.permitZone}</p>
+      </div>
+      <div class="amount">${formatPrice(item.price)}</div>
+    </button>
+  `).join("");
+}
+
 function openPermitsOverlay() {
   const overlay = document.getElementById("districtDetailOverlay");
-  const all = permitTransactions().sort((a, b) => b.dealDate.localeCompare(a.dealDate));
+  const all = permitTransactions();
+  const today = latestDealDate();
+  const dates = [...new Set(all.map((t) => t.dealDate))].sort((a, b) => b.localeCompare(a)).slice(0, 14);
+  const countFn = (d) => all.filter((t) => t.dealDate === d).length;
 
   overlay.innerHTML = `
     <div class="dd-inner" style="grid-template-columns:1fr">
@@ -947,25 +1025,18 @@ function openPermitsOverlay() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
             홈으로
           </button>
-          <span>›</span><span>토지거래허가 전체</span>
+          <span>›</span><span>날짜별 토허구역</span>
         </div>
         <div class="dd-title-row">
           <h2 class="dd-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l4 4v14H7z"/><path d="M17 3v5h4"/><path d="M3 8h4v13H3z"/></svg>
-            토지거래허가 전체 내역
+            날짜별 토지거래허가 내역
           </h2>
-          <span class="dd-date">총 ${all.length}건</span>
+          <span class="dd-date">전체 ${all.length}건</span>
         </div>
-        <div class="dd-list" style="margin-top:20px">
-          ${all.map((item) => `
-            <button class="transaction-row detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="permit">
-              <div>
-                <h3>${item.complex}</h3>
-                <p>${item.district} ${item.dong} · ${item.dealDate} · ${item.permitZone}</p>
-              </div>
-              <div class="amount">${formatPrice(item.price)}</div>
-            </button>
-          `).join("")}
+        ${overlayDateStripHtml(dates, today, countFn)}
+        <div class="overlay-date-content dd-list" style="margin-top:8px">
+          ${renderPermitsByDate(today)}
         </div>
       </div>
     </div>
@@ -973,6 +1044,7 @@ function openPermitsOverlay() {
   overlay.removeAttribute("hidden");
   document.body.style.overflow = "hidden";
   document.getElementById("ddBackBtn").addEventListener("click", closeDistrictDetail);
+  bindOverlayDateTabs(overlay, renderPermitsByDate);
 }
 
 function renderPermits() {

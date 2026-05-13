@@ -1579,6 +1579,37 @@ h2 {
   margin-top: 16px;
 }
 
+/* ── 오버레이 날짜 탭 ─────────────────────────────────── */
+.overlay-date-strip {
+  display: grid;
+  grid-auto-columns: minmax(72px, 1fr);
+  grid-auto-flow: column;
+  gap: 8px;
+  margin-top: 20px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+
+.overlay-date-strip .permit-date {
+  min-height: 78px;
+  padding: 10px 8px;
+}
+
+.overlay-date-strip .permit-date em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sky-strong);
+}
+
+.overlay-date-strip .permit-date.active em {
+  color: var(--sky-deep, #0e86c8);
+}
+
+.overlay-date-content {
+  margin-top: 8px;
+}
+
 .dd-sidebar {
   position: sticky;
   top: 28px;

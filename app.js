@@ -1112,10 +1112,11 @@ function openDetail(id, context = "transaction") {
 
   document.getElementById("detailKicker").textContent = detailContextLabel(context);
   document.getElementById("detailTitle").textContent = item.complex;
+  const aptDongLabel = item.aptDong ? ` ${item.aptDong}동` : "";
   document.getElementById("detailSummary").innerHTML = `
     <div>
       <strong>${formatPrice(item.price)}</strong>
-      <span>${item.district} ${item.dong} · ${item.dealDate} 계약 · 전용 ${item.area.toFixed(2)}㎡</span>
+      <span>${item.district} ${item.dong}${aptDongLabel} · ${item.dealDate} 계약 · 전용 ${item.area.toFixed(2)}㎡</span>
     </div>
     <div class="detail-badge">${recordLabel}</div>
   `;
@@ -1123,19 +1124,18 @@ function openDetail(id, context = "transaction") {
   const fields = [
     ["거래일", item.dealDate],
     ["지역", `${item.district} ${item.dong}`],
+    ["아파트 동", item.aptDong ? `${item.aptDong}동` : "정보 없음"],
+    ["거래유형", item.dealingGbn || "정보 없음"],
     ["전용면적", `${item.area.toFixed(2)}㎡ · ${pyeong(item.area).toFixed(1)}평`],
     ["거래층", `${item.floor}층`],
     ["건축년도", `${item.builtYear}년`],
     ["주소", item.address || `서울 ${item.district} ${item.dong}`],
-    ["총 세대수", `${moneyFormatter.format(item.households || 0)}세대`],
     ["평당가", `${moneyFormatter.format(pricePerPyeong(item))}만원`],
     ["이전 최고가", formatPrice(item.previousHigh)],
     ["최고가 대비", gap],
     ["최근 거래", `${item.recentCount}건`],
     ["토지거래허가", item.permitZone || "해당 없음"],
-    ["허가 소요일", item.permitZone ? `${item.permitDays || 1}일` : "해당 없음"],
     ["AI 매칭 근거", reasons],
-    ["데이터 상태", "샘플 데이터"],
   ];
 
   document.getElementById("detailGrid").innerHTML = fields.map(([label, value]) => `
@@ -1146,7 +1146,7 @@ function openDetail(id, context = "transaction") {
   `).join("");
 
   document.getElementById("detailNote").textContent =
-    "실서비스에서는 이 화면에 법정동코드, 거래유형, 신고일, 원천 API 식별자, 단지별 과거 거래 추이와 토허구역 고시 링크를 함께 연결합니다.";
+    "국토교통부 실거래가 공개시스템 원천 데이터 기준입니다. 신고일 기준으로 최대 60일 이내 데이터가 반영됩니다.";
 
   detailDialog.showModal();
 }

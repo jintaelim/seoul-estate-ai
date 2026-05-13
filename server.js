@@ -62,10 +62,10 @@ const FETCH_HEADERS = {
   "Accept": "application/xml, text/xml, */*",
 };
 
-async function fetchDistrict(lawdCd, dealYmd) {
+async function fetchDistrictPage(lawdCd, dealYmd, pageNo) {
   const url = new URL("http://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade");
   url.searchParams.set("serviceKey", SERVICE_KEY);
-  url.searchParams.set("pageNo", "1");
+  url.searchParams.set("pageNo", String(pageNo));
   url.searchParams.set("numOfRows", "1000");
   url.searchParams.set("LAWD_CD", lawdCd);
   url.searchParams.set("DEAL_YMD", dealYmd);
@@ -74,9 +74,24 @@ async function fetchDistrict(lawdCd, dealYmd) {
   if (!res.ok) throw new Error(`API ${res.status} for ${lawdCd} ${dealYmd}`);
   const xml = await res.text();
   const parsed = xmlParser.parse(xml);
-  const items = parsed?.response?.body?.items?.item;
-  if (!items) return [];
-  return Array.isArray(items) ? items : [items];
+  const body = parsed?.response?.body;
+  const items = body?.items?.item;
+  const totalCount = Number(body?.totalCount ?? 0);
+  const list = !items ? [] : Array.isArray(items) ? items : [items];
+  return { list, totalCount };
+}
+
+async function fetchDistrict(lawdCd, dealYmd) {
+  const first = await fetchDistrictPage(lawdCd, dealYmd, 1);
+  const allItems = [...first.list];
+  const totalPages = Math.ceil(first.totalCount / 1000);
+  if (totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) => fetchDistrictPage(lawdCd, dealYmd, i + 2))
+    );
+    for (const { list } of rest) allItems.push(...list);
+  }
+  return allItems;
 }
 
 function parsePrice(raw) {
@@ -93,19 +108,27 @@ function normalizeItem(item, district) {
   const month = String(item["dealMonth"]).padStart(2, "0");
   const day = String(item["dealDay"]).padStart(2, "0");
   const dong = String(item["umdNm"] ?? "").trim();
+  const aptDong = String(item["aptDong"] ?? "").trim(); // 아파트 동 (건물 동호수 구분)
   const complex = String(item["aptNm"] ?? "").trim();
   const jibun = String(item["jibun"] ?? "").trim();
+  const dealingGbn = String(item["dealingGbn"] ?? "").trim(); // 중개거래/직거래
+  const cdealType = String(item["cdealType"] ?? "").trim(); // 취소 거래 여부
+
+  // 취소된 거래 제외
+  if (cdealType === "취소") return null;
 
   return {
-    id: `${district}-${complex}-${year}${month}${day}-${floor}-${area}`,
+    id: `${district}-${complex}-${aptDong}-${year}${month}${day}-${floor}-${area}`,
     district,
     dong,
+    aptDong,
     complex,
     area,
     floor,
     price,
     builtYear,
     dealDate: `${year}-${month}-${day}`,
+    dealingGbn,
     permitZone: getPermitZone(dong),
     address: `서울 ${district} ${dong}${jibun ? " " + jibun : ""}`,
     households: 0,
@@ -167,7 +190,7 @@ async function fetchAllDistricts() {
     yearMonths.map((ym) => async () => {
       try {
         const items = await fetchDistrict(code, ym);
-        return items.map((item) => normalizeItem(item, district));
+        return items.map((item) => normalizeItem(item, district)).filter(Boolean);
       } catch (err) {
         console.warn(`[skip] ${district} ${ym}: ${err.message}`);
         return [];

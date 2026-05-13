@@ -1,4 +1,6 @@
 {
+  "buildCommand": "",
+  "outputDirectory": ".",
   "functions": {
     "api/transactions.js": {
       "maxDuration": 60

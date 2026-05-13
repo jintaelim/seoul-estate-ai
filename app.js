@@ -939,29 +939,122 @@ function openRecordsOverlay() {
   bindOverlayDateTabs(overlay, renderRecordsByDate);
 }
 
-/* ── 오늘 실거래 전체 오버레이 ────────────────────────── */
+/* ── 실거래 오버레이 (월/연 이동 + 자치구 / 가격대별) ─── */
 
-function renderTransactionsByDate(date) {
-  const rows = transactions
-    .filter((t) => t.dealDate === date)
-    .sort((a, b) => b.price - a.price);
-  if (!rows.length) return `<div class="transaction-row"><div><h3>${date} 거래 없음</h3><p>해당 날짜에 집계된 거래가 없습니다.</p></div></div>`;
-  return rows.map((item) => `
+const PRICE_RANGES = [
+  { label: "5억 이하",    min: 0,      max: 50000  },
+  { label: "5억 ~ 10억",  min: 50000,  max: 100000 },
+  { label: "10억 ~ 15억", min: 100000, max: 150000 },
+  { label: "15억 ~ 20억", min: 150000, max: 200000 },
+  { label: "20억 ~ 30억", min: 200000, max: 300000 },
+  { label: "30억 초과",   min: 300000, max: Infinity },
+];
+
+let txOvState = { month: null, date: null, view: "district" };
+
+function txAvailableMonths() {
+  return [...new Set(transactions.map((t) => t.dealDate.slice(0, 7)))]
+    .sort((a, b) => b.localeCompare(a));
+}
+
+function txDatesInMonth(ym) {
+  return [...new Set(
+    transactions.filter((t) => t.dealDate.startsWith(ym)).map((t) => t.dealDate)
+  )].sort((a, b) => b.localeCompare(a));
+}
+
+function txMonthNavHtml(month) {
+  const months = txAvailableMonths();
+  const idx = months.indexOf(month);
+  const [y, m] = month.split("-");
+  return `
+    <div class="tx-month-nav">
+      <button class="tx-month-arrow" type="button" data-month-step="1" ${idx >= months.length - 1 ? "disabled" : ""}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <span class="tx-month-label">${y}년 ${parseInt(m)}월</span>
+      <button class="tx-month-arrow" type="button" data-month-step="-1" ${idx <= 0 ? "disabled" : ""}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>`;
+}
+
+function txDayStripHtml(month, selectedDate) {
+  const dates = txDatesInMonth(month);
+  if (!dates.length) return `<div class="overlay-date-strip"><span style="padding:16px;color:var(--ink-muted);font-size:13px">해당 월 거래 없음</span></div>`;
+  return `<div class="overlay-date-strip">` + dates.map((date) => {
+    const { day, weekday } = formatDayLabel(date);
+    const count = transactions.filter((t) => t.dealDate === date).length;
+    return `<button class="permit-date ${date === selectedDate ? "active" : ""}" type="button" data-overlay-date="${date}">
+      <span>${weekday}</span><strong>${day}</strong><em>${count}</em>
+    </button>`;
+  }).join("") + `</div>`;
+}
+
+function txViewTabsHtml(view) {
+  return `<div class="tx-view-tabs">
+    <button class="tx-view-tab ${view === "district" ? "active" : ""}" type="button" data-view="district">자치구별</button>
+    <button class="tx-view-tab ${view === "price" ? "active" : ""}" type="button" data-view="price">가격대별</button>
+  </div>`;
+}
+
+function txGroupHtml(label, subLabel, count, itemsHtml) {
+  return `<div class="tx-group">
+    <button class="tx-group-header" type="button">
+      <span class="tx-group-name">${label}</span>
+      <span class="tx-group-meta">${subLabel} · ${count}건</span>
+      <svg class="tx-group-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="tx-group-items">${itemsHtml}</div>
+  </div>`;
+}
+
+function txRowsHtml(items) {
+  return items.map((item) => `
     <button class="transaction-row detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="transaction">
       <div>
         <h3>${item.complex}</h3>
         <p>${item.district} ${item.dong} · 전용 ${item.area.toFixed(1)}㎡ · ${item.floor}층</p>
       </div>
       <div class="amount">${formatPrice(item.price)}</div>
-    </button>
-  `).join("");
+    </button>`).join("");
+}
+
+function txRenderByDistrict(items) {
+  if (!items.length) return `<div class="transaction-row"><div><h3>거래 없음</h3><p>해당 날짜에 집계된 거래가 없습니다.</p></div></div>`;
+  const groups = {};
+  items.forEach((t) => { (groups[t.district] = groups[t.district] || []).push(t); });
+  return Object.entries(groups)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([district, rows]) => {
+      const sorted = [...rows].sort((a, b) => b.price - a.price);
+      const maxP = sorted[0]?.price ?? 0;
+      return txGroupHtml(district, `최고 ${formatPrice(maxP)}`, rows.length, txRowsHtml(sorted));
+    }).join("");
+}
+
+function txRenderByPrice(items) {
+  if (!items.length) return `<div class="transaction-row"><div><h3>거래 없음</h3><p>해당 날짜에 집계된 거래가 없습니다.</p></div></div>`;
+  return PRICE_RANGES.map((range) => {
+    const rows = items
+      .filter((t) => t.price >= range.min && t.price < range.max)
+      .sort((a, b) => b.price - a.price);
+    if (!rows.length) return "";
+    const districts = [...new Set(rows.map((r) => r.district))].join(", ");
+    return txGroupHtml(range.label, districts, rows.length, txRowsHtml(rows));
+  }).join("");
+}
+
+function txRenderContent(date, view) {
+  const items = transactions.filter((t) => t.dealDate === date).sort((a, b) => b.price - a.price);
+  return view === "district" ? txRenderByDistrict(items) : txRenderByPrice(items);
 }
 
 function openTransactionsOverlay() {
   const overlay = document.getElementById("districtDetailOverlay");
   const today = latestDealDate();
-  const dates = [...new Set(transactions.map((t) => t.dealDate))].sort((a, b) => b.localeCompare(a)).slice(0, 14);
-  const countFn = (d) => transactions.filter((t) => t.dealDate === d).length;
+  const todayMonth = today.slice(0, 7);
+  txOvState = { month: todayMonth, date: today, view: "district" };
 
   overlay.innerHTML = `
     <div class="dd-inner" style="grid-template-columns:1fr">
@@ -979,17 +1072,58 @@ function openTransactionsOverlay() {
             날짜별 실거래 전체
           </h2>
         </div>
-        ${overlayDateStripHtml(dates, today, countFn)}
-        <div class="overlay-date-content dd-list" style="margin-top:8px">
-          ${renderTransactionsByDate(today)}
-        </div>
+        <div id="txMonthNav">${txMonthNavHtml(todayMonth)}</div>
+        <div id="txDayStrip">${txDayStripHtml(todayMonth, today)}</div>
+        <div id="txViewTabs">${txViewTabsHtml("district")}</div>
+        <div class="tx-content dd-list" id="txContent">${txRenderContent(today, "district")}</div>
       </div>
-    </div>
-  `;
+    </div>`;
+
   overlay.removeAttribute("hidden");
   document.body.style.overflow = "hidden";
   document.getElementById("ddBackBtn").addEventListener("click", closeDistrictDetail);
-  bindOverlayDateTabs(overlay, renderTransactionsByDate);
+
+  overlay.addEventListener("click", (e) => {
+    // 월 이동
+    const monthBtn = e.target.closest("[data-month-step]");
+    if (monthBtn && !monthBtn.disabled) {
+      const step = parseInt(monthBtn.dataset.monthStep);
+      const months = txAvailableMonths();
+      const newIdx = months.indexOf(txOvState.month) + step;
+      if (newIdx >= 0 && newIdx < months.length) {
+        txOvState.month = months[newIdx];
+        const dates = txDatesInMonth(txOvState.month);
+        txOvState.date = dates[0] || txOvState.date;
+        document.getElementById("txMonthNav").innerHTML = txMonthNavHtml(txOvState.month);
+        document.getElementById("txDayStrip").innerHTML = txDayStripHtml(txOvState.month, txOvState.date);
+        document.getElementById("txContent").innerHTML = txRenderContent(txOvState.date, txOvState.view);
+      }
+      return;
+    }
+    // 일자 탭
+    const dayBtn = e.target.closest("[data-overlay-date]");
+    if (dayBtn) {
+      txOvState.date = dayBtn.dataset.overlayDate;
+      overlay.querySelectorAll("[data-overlay-date]").forEach((b) => b.classList.remove("active"));
+      dayBtn.classList.add("active");
+      document.getElementById("txContent").innerHTML = txRenderContent(txOvState.date, txOvState.view);
+      return;
+    }
+    // 뷰 탭
+    const viewBtn = e.target.closest("[data-view]");
+    if (viewBtn) {
+      txOvState.view = viewBtn.dataset.view;
+      overlay.querySelectorAll("[data-view]").forEach((b) => b.classList.remove("active"));
+      viewBtn.classList.add("active");
+      document.getElementById("txContent").innerHTML = txRenderContent(txOvState.date, txOvState.view);
+      return;
+    }
+    // 그룹 열기/닫기
+    const groupHeader = e.target.closest(".tx-group-header");
+    if (groupHeader) {
+      groupHeader.closest(".tx-group").classList.toggle("open");
+    }
+  });
 }
 
 /* ── 토허구역 오버레이 ────────────────────────────────── */

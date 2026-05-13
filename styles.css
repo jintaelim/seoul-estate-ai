@@ -1610,6 +1610,155 @@ h2 {
   margin-top: 8px;
 }
 
+/* ── 실거래 오버레이: 월 이동 네비게이션 ─────────────────── */
+.tx-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 20px 0 12px;
+}
+
+.tx-month-label {
+  font-size: 17px;
+  font-weight: 640;
+  color: var(--navy);
+  min-width: 120px;
+  text-align: center;
+}
+
+.tx-month-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(5, 11, 88, 0.15);
+  border-radius: 50%;
+  background: #f7f9ff;
+  color: var(--navy);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.tx-month-arrow:hover:not(:disabled) {
+  background: var(--sky-muted);
+}
+
+.tx-month-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.tx-month-arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── 실거래 오버레이: 뷰 탭 ────────────────────────────── */
+.tx-view-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+
+.tx-view-tab {
+  flex: 1;
+  padding: 9px 0;
+  border: 1px solid rgba(5, 11, 88, 0.15);
+  border-radius: 10px;
+  background: #f7f9ff;
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tx-view-tab.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.tx-view-tab:not(.active):hover {
+  background: var(--sky-muted);
+  color: var(--navy);
+}
+
+/* ── 실거래 오버레이: 그룹 아코디언 ────────────────────── */
+.tx-content {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tx-group {
+  border: 1px solid rgba(5, 11, 88, 0.09);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.tx-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: #f7f9ff;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s;
+}
+
+.tx-group-header:hover {
+  background: var(--sky-muted);
+}
+
+.tx-group-name {
+  font-size: 14px;
+  font-weight: 660;
+  color: var(--navy);
+  flex: 1;
+}
+
+.tx-group-meta {
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.tx-group-arrow {
+  width: 16px;
+  height: 16px;
+  color: var(--ink-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.tx-group.open .tx-group-arrow {
+  transform: rotate(180deg);
+}
+
+.tx-group-items {
+  display: none;
+  border-top: 1px solid rgba(5, 11, 88, 0.07);
+}
+
+.tx-group.open .tx-group-items {
+  display: block;
+}
+
+.tx-group-items .transaction-row {
+  border-radius: 0;
+  border-bottom: 1px solid rgba(5, 11, 88, 0.06);
+}
+
+.tx-group-items .transaction-row:last-child {
+  border-bottom: none;
+}
+
 .dd-sidebar {
   position: sticky;
   top: 28px;

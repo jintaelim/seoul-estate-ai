@@ -3,6 +3,8 @@ import { XMLParser } from "fast-xml-parser";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { fetchCandidateTransactions, normalizeMonthsParam } from "./candidate-service.js";
+import { fetchMolit, runInBatches } from "./molit-fetch.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -17,7 +19,8 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SERVICE_KEY = process.env.MOLIT_API_KEY; // 공공데이터포털 디코딩 키
+const SERVICE_KEY = process.env.MOLIT_API_KEY;  // 국토부 실거래가
+const KREAI_KEY   = process.env.KREAI_API_KEY;  // 한국부동산원 시세 (선택)
 
 // 서울 25개 구 법정동코드 (5자리)
 const DISTRICT_CODES = {
@@ -70,7 +73,7 @@ async function fetchDistrictPage(lawdCd, dealYmd, pageNo) {
   url.searchParams.set("LAWD_CD", lawdCd);
   url.searchParams.set("DEAL_YMD", dealYmd);
 
-  const res = await fetch(url.toString(), { headers: FETCH_HEADERS });
+  const res = await fetchMolit(url.toString(), { headers: FETCH_HEADERS });
   if (!res.ok) throw new Error(`API ${res.status} for ${lawdCd} ${dealYmd}`);
   const xml = await res.text();
   const parsed = xmlParser.parse(xml);
@@ -168,18 +171,10 @@ function computeRecentCounts(items) {
 }
 
 // 5개씩 병렬 처리 (API 과부하 방지)
-async function batchFetch(tasks, batchSize = 5) {
-  const results = [];
-  for (let i = 0; i < tasks.length; i += batchSize) {
-    const batch = await Promise.all(tasks.slice(i, i + batchSize).map((fn) => fn()));
-    results.push(...batch.flat());
-  }
-  return results;
-}
-
 // ── 서버 인메모리 캐시 ────────────────────────────────────
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1시간
 let cache = { data: null, fetchedAt: null, fetching: false };
+const candidateCache = new Map();
 
 async function fetchAllDistricts() {
   if (cache.fetching) return; // 중복 실행 방지
@@ -200,7 +195,7 @@ async function fetchAllDistricts() {
 
   try {
     console.log(`[api] 수집 시작 — ${Object.keys(DISTRICT_CODES).length}개 구 × ${yearMonths.length}개월`);
-    let raw = await batchFetch(tasks, 8); // 배치 크기 8로 증가
+    let raw = (await runInBatches(tasks, 3, 300)).flat();
     raw = computePreviousHighs(raw);
     raw = computeRecentCounts(raw);
     raw.sort((a, b) => b.dealDate.localeCompare(a.dealDate));
@@ -219,8 +214,6 @@ function isCacheFresh() {
   return cache.data && cache.fetchedAt &&
     Date.now() - new Date(cache.fetchedAt).getTime() < CACHE_TTL_MS;
 }
-
-app.use(express.static(__dirname));
 
 app.get("/api/transactions", async (req, res) => {
   if (!SERVICE_KEY) {
@@ -264,6 +257,68 @@ app.get("/api/transactions", async (req, res) => {
     count: cache.data.length,
   });
 });
+
+app.get("/api/candidate-transactions", async (req, res) => {
+  const months = normalizeMonthsParam(req.query.months, 12);
+  const cacheKey = String(months);
+  const cached = candidateCache.get(cacheKey);
+
+  if (cached && Date.now() - new Date(cached.fetchedAt).getTime() < CACHE_TTL_MS) {
+    return res.json({ ...cached, source: "molit-candidate-cache" });
+  }
+
+  try {
+    const result = await fetchCandidateTransactions({ serviceKey: SERVICE_KEY, months });
+    candidateCache.set(cacheKey, result);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── 한국부동산원 아파트 시세 프록시 ──────────────────────────
+// 사용: GET /api/apt-price?lawdCd=11680&dealYmd=202605
+// 서비스명: 한국부동산원_아파트매매실거래상세 (getRKAptTrade)
+// data.go.kr → "한국부동산원" 검색 → KREAI_API_KEY 발급 후 .env에 추가
+app.get("/api/apt-price", async (req, res) => {
+  if (!KREAI_KEY) {
+    return res.status(503).json({
+      error: "KREAI_API_KEY가 없습니다. data.go.kr에서 한국부동산원 API 키를 발급받아 .env에 KREAI_API_KEY=키값 형식으로 추가하세요.",
+      guide: "https://www.data.go.kr/data/15058017/openapi.do",
+    });
+  }
+
+  const { lawdCd, dealYmd } = req.query;
+  if (!lawdCd || !dealYmd) {
+    return res.status(400).json({ error: "lawdCd, dealYmd 파라미터 필요" });
+  }
+
+  try {
+    const url = new URL("http://apis.data.go.kr/1611000/AptPriceInfoService2/getRKAptTrade");
+    url.searchParams.set("serviceKey", KREAI_KEY);
+    url.searchParams.set("pageNo", "1");
+    url.searchParams.set("numOfRows", "1000");
+    url.searchParams.set("LAWD_CD", lawdCd);
+    url.searchParams.set("DEAL_YMD", dealYmd);
+
+    const apiRes = await fetch(url.toString(), { headers: FETCH_HEADERS });
+    if (!apiRes.ok) throw new Error(`API ${apiRes.status}`);
+    const xml = await apiRes.text();
+    const parsed = xmlParser.parse(xml);
+    const body  = parsed?.response?.body;
+    const items = body?.items?.item;
+    const list  = !items ? [] : Array.isArray(items) ? items : [items];
+
+    res.json({ data: list, totalCount: Number(body?.totalCount ?? 0) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Vite 빌드 결과 제공. 개발 중에는 Vite(5173)가 이 API 서버(3000)를 프록시합니다.
+const distDir = join(__dirname, "dist");
+app.use(express.static(distDir));
+app.get("*", (req, res) => res.sendFile(join(distDir, "index.html")));
 
 // 서버 시작 시 즉시 수집 시작
 app.listen(PORT, () => {

@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { fetchMolit, runInBatches } from "../molit-fetch.js";
 
 const SERVICE_KEY = process.env.MOLIT_API_KEY;
 
@@ -51,7 +52,7 @@ async function fetchDistrictPage(lawdCd, dealYmd, pageNo) {
   url.searchParams.set("LAWD_CD", lawdCd);
   url.searchParams.set("DEAL_YMD", dealYmd);
 
-  const res = await fetch(url.toString(), { headers: FETCH_HEADERS });
+  const res = await fetchMolit(url.toString(), { headers: FETCH_HEADERS });
   if (!res.ok) throw new Error(`API ${res.status} for ${lawdCd} ${dealYmd}`);
   const xml = await res.text();
   const parsed = xmlParser.parse(xml);
@@ -143,15 +144,6 @@ function computeRecentCounts(items) {
   return items.map((t) => ({ ...t, recentCount: counts[t.complex] ?? 1 }));
 }
 
-async function batchFetch(tasks, batchSize = 10) {
-  const results = [];
-  for (let i = 0; i < tasks.length; i += batchSize) {
-    const batch = await Promise.all(tasks.slice(i, i + batchSize).map((fn) => fn()));
-    results.push(...batch.flat());
-  }
-  return results;
-}
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
@@ -175,7 +167,7 @@ export default async function handler(req, res) {
   );
 
   try {
-    let raw = await batchFetch(tasks, 10);
+    let raw = (await runInBatches(tasks, 3, 300)).flat();
     raw = computePreviousHighs(raw);
     raw = computeRecentCounts(raw);
     raw.sort((a, b) => b.dealDate.localeCompare(a.dealDate));

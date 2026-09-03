@@ -1,3 +1,5 @@
+// Legacy reference: the browser entry point is now src/main.jsx.
+// Kept temporarily so the pre-React implementation can be compared during migration.
 const transactions = [
   {
     id: 1,
@@ -261,7 +263,72 @@ const state = {
   dataSource: "sample",
 };
 
+// ── 새로 올라온 거래 상태 ─────────────────────────────────
+const newClosingsState = { tab: "today", region: "전체", showAll: false };
+
+// ── 아파트 매물 검색 상태 ─────────────────────────────────
+const listingSearchState = {
+  theme: "all",
+  page: 1,
+  results: [],
+};
+
+// ── 갈아타기 후보 실거래 상태 ─────────────────────────────
+const candidateState = {
+  items: [],
+  filter: "all",
+  selectedId: null,
+  months: 12,
+  loading: false,
+  fetchedAt: null,
+  error: null,
+};
+
+// ── 거래량 캘린더 상태 ───────────────────────────────────
+const calTxState = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+  selectedDate: latestDealDate(),
+};
+
+const calendarEvents = [
+  { date: "2026-05-12", type: "특별공급", title: "이촌 르엘", region: "용산" },
+  { date: "2026-05-13", type: "일반공급", title: "더샵 신길센트럴", region: "영등포" },
+  { date: "2026-05-14", type: "당첨자발표", title: "아크로 드 서초", region: "서초" },
+  { date: "2026-05-20", type: "전매제한해제", title: "래미안 엘라비네", region: "강서" },
+  { date: "2026-05-27", type: "전매제한해제", title: "고척 푸르지오 힐스테이트", region: "구로" },
+];
+
+const askingSignals = [
+  { complex: "래미안원베일리", area: "224B", before: "180억", after: "150억", delta: "-30억", tone: "down" },
+  { complex: "현대(신현대)", area: "165B", before: "92억", after: "80억", delta: "-12억", tone: "down" },
+  { complex: "디에이치퍼스티어아이파크", area: "85A", before: "26억", after: "29억", delta: "+3억", tone: "up" },
+  { complex: "올림픽파크포레온", area: "85A", before: "24.8억", after: "27억", delta: "+2.2억", tone: "up" },
+];
+
+const offerItems = [
+  { title: "이촌 르엘", meta: "서울 용산 · 98세대 · 03.30" },
+  { title: "아크로 드 서초", meta: "서울 서초 · 177세대 · 03.20" },
+  { title: "더샵 신길센트럴", meta: "서울 영등포 · 169세대 · 03.20" },
+];
+
+const noticeItems = [
+  { title: "압구정특별계획구역2 환경영향평가 공람", meta: "강남구 · 2026.04.02" },
+  { title: "흑석11구역 관리처분계획 변경인가", meta: "동작구 · 2026.04.02" },
+  { title: "신촌지역 마포3구역 정비계획 재공람", meta: "마포구 · 2026.04.02" },
+];
+
 const moneyFormatter = new Intl.NumberFormat("ko-KR");
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[ch]));
+}
 
 function toEok(priceInManwon) {
   return priceInManwon / 10000;
@@ -360,6 +427,10 @@ function getSelectedPermitItem() {
     dateRows[0] ||
     null
   );
+}
+
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function latestDealDate() {
@@ -508,6 +579,7 @@ function buildAssistantResponse(criteria, results) {
 
 function addMessage(text, type) {
   const thread = document.getElementById("assistantThread");
+  if (!thread) return;
   const message = document.createElement("div");
   message.className = `message ${type}`;
   message.textContent = text;
@@ -516,9 +588,108 @@ function addMessage(text, type) {
 }
 
 function renderMetrics() {
-  document.getElementById("metricDeals").textContent = transactions.length;
-  document.getElementById("metricRecords").textContent = transactions.filter(isRecord).length;
-  document.getElementById("metricPermits").textContent = permitTransactions().length;
+  const latest = getTabTransactions("today"); // 최신 등록분
+  document.getElementById("mDeals").textContent = latest.length;
+  document.getElementById("mRec").textContent = latest.filter(isRecord).length;
+  document.getElementById("mPerm").textContent = latest.filter(t => t.permitZone).length;
+}
+
+function renderServiceMap() {
+  const grid = document.getElementById("serviceModuleGrid");
+  if (!grid) return;
+
+  const modules = [
+    { title: "아가리 호가", value: "28단지", desc: "매물 호가 인상·인하와 매수/매도 압력", target: "#askingSignal" },
+    { title: "토지거래허가", value: `${permitTransactions().length}건`, desc: "날짜별 허가 거래와 단지 상세", target: "#permits" },
+    { title: "실거래가", value: `${transactions.length}건`, desc: "날짜별 실거래, 자치구별·가격대별 분석", target: "#transactions" },
+    { title: "입주자모집공고", value: "진행 13건", desc: "청약 공고와 전매제한 해제 일정", target: "#offers" },
+    { title: "고시/공고", value: "서울 25구", desc: "정비사업 고시·공고 검색과 필터", target: "#notices" },
+    { title: "손피 계산기", value: "무한급수", desc: "분양권 손피와 양도세 역산 계산", target: "#sonp" },
+    { title: "부동산 캘린더", value: "5월", desc: "특별공급, 일반공급, 당첨자발표 일정", target: "#calendar" },
+    { title: "관심단지·뉴스", value: "20건", desc: "관심단지 저장, 정책 시그널, 오늘 뉴스", target: "#serviceMap" },
+  ];
+
+  grid.innerHTML = modules.map((module) => `
+    <a class="service-module-card" href="${module.target}" aria-label="${module.title} 섹션으로 이동">
+      <span>${module.title}</span>
+      <strong>${module.value}</strong>
+      <p>${module.desc}</p>
+    </a>
+  `).join("");
+}
+
+function renderCalendar() {
+  const grid = document.getElementById("calendarGrid");
+  if (!grid) return;
+  const dates = ["2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15", "2026-05-20", "2026-05-27"];
+  grid.innerHTML = dates.map((date) => {
+    const { day, weekday } = formatDayLabel(date);
+    const events = calendarEvents.filter((event) => event.date === date);
+    return `
+      <div class="calendar-day ${events.length ? "has-event" : ""}">
+        <span>${weekday}</span>
+        <strong>${day}</strong>
+        ${events.map((event) => `<em>${event.type}</em><p>${event.title}</p>`).join("")}
+      </div>
+    `;
+  }).join("");
+}
+
+function renderAskingSignals() {
+  const list = document.getElementById("askList");
+  if (!list) return;
+  list.innerHTML = askingSignals.map((item) => `
+    <div class="ask-item">
+      <div>
+        <div class="acplx">${item.complex}</div>
+        <div class="acgu">${item.area} · ${item.before} → ${item.after}</div>
+      </div>
+      <span class="achg ${item.tone}">${item.delta}</span>
+    </div>
+  `).join("");
+}
+
+function renderMiniDataPanels() {
+  const offerList = document.getElementById("offerList");
+  const noticeList = document.getElementById("noticeList");
+  if (offerList) {
+    offerList.innerHTML = offerItems.map((item) => `
+      <div class="mini-data-row">
+        <strong>${item.title}</strong>
+        <span>${item.meta}</span>
+      </div>
+    `).join("");
+  }
+  if (noticeList) {
+    noticeList.innerHTML = noticeItems.map((item) => `
+      <div class="mini-data-row">
+        <strong>${item.title}</strong>
+        <span>${item.meta}</span>
+      </div>
+    `).join("");
+  }
+}
+
+function calculateSonp() {
+  const premium = Number(document.getElementById("sonpPremium")?.value || 0);
+  const rate = Number(document.getElementById("sonpRate")?.value || 0.77);
+  const tax = Math.round((premium * rate) / (1 - rate));
+  const total = premium + tax;
+  const result = document.getElementById("sonpResult");
+  if (!result) return;
+  result.innerHTML = `
+    <span>예상 양도세</span>
+    <strong>${moneyFormatter.format(tax)}만원</strong>
+    <p>매수자 부담 총액 ${moneyFormatter.format(total)}만원</p>
+  `;
+}
+
+function renderHomeModules() {
+  renderServiceMap();
+  renderCalendar();
+  renderAskingSignals();
+  renderMiniDataPanels();
+  calculateSonp();
 }
 
 function renderDistricts() {
@@ -528,7 +699,7 @@ function renderDistricts() {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = district;
-    button.className = district === state.selectedDistrict ? "active" : "";
+    button.className = `fcheck ${district === state.selectedDistrict ? "active" : ""}`;
     button.addEventListener("click", () => {
       state.selectedDistrict = district;
       renderDistricts();
@@ -536,6 +707,223 @@ function renderDistricts() {
     });
     grid.appendChild(button);
   });
+}
+
+/* ── 아파트 매물 검색 ─────────────────────────────────── */
+
+const LISTING_PAGE_SIZE = 12;
+
+function normalizeText(value) {
+  return String(value ?? "").replace(/\s+/g, "").toLowerCase();
+}
+
+function getListingDistrictValue() {
+  return document.getElementById("listingDistrict")?.value || "전체";
+}
+
+function renderListingDistrictOptions() {
+  const select = document.getElementById("listingDistrict");
+  if (!select) return;
+  const current = select.value || "전체";
+  select.innerHTML = districts.map((district) => `
+    <option value="${escapeHtml(district)}">${escapeHtml(district)}</option>
+  `).join("");
+  select.value = districts.includes(current) ? current : "전체";
+}
+
+function listingRepresentativeRows() {
+  const groups = new Map();
+  for (const tx of transactions) {
+    const areaBucket = Math.round(Number(tx.area || 0));
+    const key = `${tx.district}|${tx.dong}|${tx.complex}|${areaBucket}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(tx);
+  }
+
+  return Array.from(groups.values()).map((rows) => {
+    const sorted = [...rows].sort((a, b) =>
+      b.dealDate.localeCompare(a.dealDate) || Number(b.price) - Number(a.price)
+    );
+    const latest = sorted[0];
+    const prices = rows.map((row) => Number(row.price || 0)).filter(Boolean);
+    const highest = Math.max(...prices, latest.price);
+    const lowest = Math.min(...prices, latest.price);
+    const avg = Math.round(prices.reduce((sum, price) => sum + price, 0) / Math.max(1, prices.length));
+    return {
+      ...latest,
+      listingStats: {
+        count: rows.length,
+        highest,
+        lowest,
+        avg,
+        latestDate: latest.dealDate,
+      },
+    };
+  });
+}
+
+function getListingCriteria() {
+  return {
+    keyword: normalizeText(document.getElementById("listingKeyword")?.value || ""),
+    district: getListingDistrictValue(),
+    minPrice: Number(document.getElementById("listingMinPrice")?.value || 0) * 10000,
+    maxPrice: Number(document.getElementById("listingMaxPrice")?.value || 0) * 10000,
+    minArea: Number(document.getElementById("listingMinArea")?.value || 0),
+    builtAfter: Number(document.getElementById("listingBuiltAfter")?.value || 0),
+    sort: document.getElementById("listingSort")?.value || "latest",
+    theme: listingSearchState.theme,
+  };
+}
+
+function matchListingTheme(item, theme) {
+  if (theme === "today") return item.dealDate === latestDealDate();
+  if (theme === "record") return isRecord(item);
+  if (theme === "permit") return Boolean(item.permitZone);
+  if (theme === "active") return Number(item.recentCount || item.listingStats?.count || 0) >= 10;
+  if (theme === "undervalued") return item.previousHigh && item.price <= item.previousHigh * 0.95;
+  if (theme === "newbuild") return Number(item.builtYear || 0) >= 2018;
+  return true;
+}
+
+function filterListingRows() {
+  const criteria = getListingCriteria();
+  const keyword = criteria.keyword;
+
+  let rows = listingRepresentativeRows().filter((item) => {
+    if (criteria.district !== "전체" && item.district !== criteria.district) return false;
+    if (criteria.minPrice && item.price < criteria.minPrice) return false;
+    if (criteria.maxPrice && item.price > criteria.maxPrice) return false;
+    if (criteria.minArea && item.area < criteria.minArea) return false;
+    if (criteria.builtAfter && item.builtYear < criteria.builtAfter) return false;
+    if (!matchListingTheme(item, criteria.theme)) return false;
+
+    if (keyword) {
+      const haystack = normalizeText([
+        item.complex,
+        item.district,
+        item.dong,
+        item.address,
+        item.permitZone,
+        item.dealingGbn,
+      ].join(" "));
+      if (!haystack.includes(keyword)) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a, b) => {
+    if (criteria.sort === "priceDesc") return b.price - a.price;
+    if (criteria.sort === "priceAsc") return a.price - b.price;
+    if (criteria.sort === "ppDesc") return pricePerPyeong(b) - pricePerPyeong(a);
+    if (criteria.sort === "activity") return (b.recentCount || b.listingStats.count) - (a.recentCount || a.listingStats.count);
+    if (criteria.sort === "gap") {
+      const gapA = a.previousHigh ? a.price / a.previousHigh : 1;
+      const gapB = b.previousHigh ? b.price / b.previousHigh : 1;
+      return gapA - gapB;
+    }
+    return b.dealDate.localeCompare(a.dealDate) || b.price - a.price;
+  });
+
+  return rows;
+}
+
+function renderListingInsights(rows) {
+  const insights = document.getElementById("listingInsights");
+  const status = document.getElementById("listingDataStatus");
+  if (!insights) return;
+
+  if (status) {
+    status.textContent = state.dataSource === "molit"
+      ? `실거래 ${transactions.length.toLocaleString()}건`
+      : "샘플 데이터";
+  }
+
+  const avgPrice = rows.length
+    ? Math.round(rows.reduce((sum, item) => sum + item.price, 0) / rows.length)
+    : 0;
+  const recordCount = rows.filter(isRecord).length;
+  const permitCount = rows.filter((item) => item.permitZone).length;
+  const topDistrict = Object.entries(rows.reduce((acc, item) => {
+    acc[item.district] = (acc[item.district] || 0) + 1;
+    return acc;
+  }, {})).sort((a, b) => b[1] - a[1])[0];
+
+  insights.innerHTML = [
+    ["검색 후보", `${rows.length.toLocaleString()}개`],
+    ["평균 거래가", rows.length ? formatPrice(avgPrice) : "-"],
+    ["신고가", `${recordCount.toLocaleString()}개`],
+    ["토허구역", `${permitCount.toLocaleString()}개`],
+    ["최다 지역", topDistrict ? `${topDistrict[0]} ${topDistrict[1]}개` : "-"],
+  ].map(([label, value]) => `
+    <div class="listing-insight">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `).join("");
+}
+
+function listingBadgeHtml(item) {
+  const badges = [];
+  if (isRecord(item)) badges.push(`<span class="listing-badge record">신고가</span>`);
+  if (item.permitZone) badges.push(`<span class="listing-badge permit">토허</span>`);
+  if (item.builtYear >= 2018) badges.push(`<span class="listing-badge">신축권</span>`);
+  if ((item.recentCount || item.listingStats?.count || 0) >= 10) badges.push(`<span class="listing-badge">거래활발</span>`);
+  if (item.previousHigh && item.price <= item.previousHigh * 0.95) badges.push(`<span class="listing-badge value">고점대비</span>`);
+  return badges.join("");
+}
+
+function listingCardHtml(item) {
+  const stats = item.listingStats || { count: item.recentCount || 1, highest: item.price, lowest: item.price, avg: item.price };
+  const gap = item.previousHigh ? Math.round((item.price / item.previousHigh - 1) * 1000) / 10 : 0;
+  const gapText = item.previousHigh
+    ? `${gap > 0 ? "+" : ""}${gap}%`
+    : "비교 없음";
+  return `
+    <button class="listing-card detail-trigger" type="button" data-detail-id="${escapeHtml(item.id)}" data-detail-context="listing" aria-label="${escapeHtml(item.complex)} 상세 보기">
+      <div class="listing-card-head">
+        <div>
+          <h3>${escapeHtml(item.complex)}</h3>
+          <p>${escapeHtml(item.district)} ${escapeHtml(item.dong)} · ${escapeHtml(item.dealDate)} · ${item.area.toFixed(1)}㎡ · ${item.floor}층</p>
+        </div>
+        <strong>${formatPrice(item.price)}</strong>
+      </div>
+      <div class="listing-badges">${listingBadgeHtml(item) || `<span class="listing-badge">일반거래</span>`}</div>
+      <div class="listing-metrics">
+        <span><em>평당가</em><strong>${moneyFormatter.format(pricePerPyeong(item))}만</strong></span>
+        <span><em>최근거래</em><strong>${moneyFormatter.format(item.recentCount || stats.count)}건</strong></span>
+        <span><em>고점대비</em><strong>${gapText}</strong></span>
+        <span><em>최고/최저</em><strong>${formatPrice(stats.highest)} / ${formatPrice(stats.lowest)}</strong></span>
+      </div>
+      <div class="listing-foot">
+        <span>${escapeHtml(item.address || `서울 ${item.district} ${item.dong}`)}</span>
+        <span>${escapeHtml(item.dealingGbn || "거래유형 미상")}</span>
+      </div>
+    </button>
+  `;
+}
+
+function renderListingSearch({ resetPage = false } = {}) {
+  if (resetPage) listingSearchState.page = 1;
+  const list = document.getElementById("listingResults");
+  const more = document.getElementById("listingMoreBtn");
+  if (!list) return;
+
+  const rows = filterListingRows();
+  listingSearchState.results = rows;
+  renderListingInsights(rows);
+
+  const visible = rows.slice(0, listingSearchState.page * LISTING_PAGE_SIZE);
+  list.innerHTML = visible.length
+    ? visible.map(listingCardHtml).join("")
+    : `<div class="listing-empty">
+        <h3>조건에 맞는 매물 후보가 없습니다</h3>
+        <p>가격 범위를 넓히거나 테마 필터를 전체로 바꿔보세요.</p>
+      </div>`;
+
+  if (more) {
+    more.style.display = rows.length > visible.length ? "" : "none";
+    more.textContent = `더보기 (${visible.length.toLocaleString()} / ${rows.length.toLocaleString()}) ↓`;
+  }
 }
 
 function renderResults(results = state.currentResults) {
@@ -574,12 +962,17 @@ function filteredTransactions() {
 }
 
 function renderTransactions() {
-  const today = latestDealDate();
+  const today = todayDate();
   const list = document.getElementById("transactionList");
   const rows = transactions
     .filter((item) => item.dealDate === today)
     .sort((a, b) => state.sortHighFirst ? b.price - a.price : a.price - b.price)
     .slice(0, 10);
+
+  const latestInData = latestDealDate();
+  const noDataMsg = latestInData
+    ? `아직 오늘(${today}) 실거래가 집계되지 않았어요.<br><small>가장 최근 데이터는 ${latestInData} 기준이에요. 아래 누적 내역에서 확인하세요.</small>`
+    : "오늘 실거래 데이터를 불러오는 중입니다.";
 
   list.innerHTML = rows.length ? rows.map((item) => `
     <button class="transaction-row detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="transaction" aria-label="${item.complex} 실거래 상세 보기">
@@ -589,7 +982,7 @@ function renderTransactions() {
       </div>
       <div class="amount">${formatPrice(item.price)}</div>
     </button>
-  `).join("") : `<div class="transaction-row"><div><h3>${today} 실거래 없음</h3><p>데이터가 아직 집계 중이거나 오늘 거래가 없습니다.</p></div></div>`;
+  `).join("") : `<div class="transaction-row no-data"><div><h3>오늘 실거래 집계 중</h3><p>${noDataMsg}</p></div></div>`;
 }
 
 /* ── 지역별 거래 활성도 ─────────────────────────────────── */
@@ -619,18 +1012,13 @@ function getDistrictActivity() {
 }
 
 function renderDistrictActivity() {
-  const grid = document.getElementById("districtActivityGrid");
+  const grid = document.getElementById("distGrid");
   if (!grid) return;
   const data = getDistrictActivity();
-  const labelMap = { hot: "활발", mid: "보통", low: "조용" };
   grid.innerHTML = data.map(({ district, count, ratio, level }) => `
-    <button class="dac ${level}" type="button" data-activity-district="${district}" aria-label="${district} 거래 현황 보기">
-      <div class="dac-top">
-        <span class="dac-name">${district}</span>
-        <span class="dac-badge ${level}">${labelMap[level]}</span>
-      </div>
-      <div class="dac-count"><strong>${count}</strong><small>건</small></div>
-      <div class="dac-bar-wrap"><span class="dac-bar ${level}" style="width:${Math.max(6, Math.round(ratio * 100))}%"></span></div>
+    <button class="dcell ${level}" type="button" data-activity-district="${district}" aria-label="${district} 거래 현황 보기">
+      <div class="dcnm">${district}</div>
+      <div class="dccnt">${count}건</div>
     </button>
   `).join("");
 }
@@ -691,17 +1079,16 @@ function renderDistrictDetailContent(district, view) {
 
   const overlay = document.getElementById("districtDetailOverlay");
   overlay.innerHTML = `
+    <div class="dd-topbar">
+      <button class="dd-back" type="button" id="ddBackBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--t1);padding:8px 14px;border-radius:var(--r2);background:var(--bg);border:1.5px solid var(--div);transition:all .15s">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+        뒤로가기
+      </button>
+      <span style="font-size:15px;font-weight:800;color:var(--t1)">${district} 부동산 현황</span>
+    </div>
     <div class="dd-inner">
       <div class="dd-main">
-        <div class="dd-breadcrumb">
-          <button class="dd-back" type="button" id="ddBackBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
-            자치구 목록
-          </button>
-          <span>›</span>
-          <span>${district}</span>
-        </div>
-        <div class="dd-title-row">
+        <div class="dd-title-row" style="margin-top:4px">
           <h2 class="dd-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             ${district} 부동산 현황
@@ -735,7 +1122,7 @@ function renderDistrictDetailContent(district, view) {
                   <span class="dd-top-dong-name">${dong}</span>
                   <span class="dd-top-count">${cnt}건</span>
                 </div>
-              `).join("") : `<div class="dd-top-item" style="color:rgba(255,255,255,0.55)">오늘 거래 데이터 없음</div>`}
+              `).join("") : `<div class="dd-top-item" style="color:var(--t3)">오늘 거래 데이터 없음</div>`}
             </div>
           </div>
         </div>
@@ -795,32 +1182,6 @@ function renderDistrictDetailContent(district, view) {
         </div>
       </div>
 
-      <aside class="dd-sidebar">
-        <div class="dd-insight-title">부동산 인사이트 더 깊게 즐기기</div>
-        <div class="dd-insight-list">
-          <button class="dd-insight-item" type="button">
-            <span class="dd-insight-icon">📋</span>
-            <div>
-              <div class="dd-insight-name">이때샀으면</div>
-              <div class="dd-insight-desc">과거 거래 시점 대비 현재 수익률을 계산해 보세요.</div>
-            </div>
-          </button>
-          <button class="dd-insight-item" type="button">
-            <span class="dd-insight-icon">📊</span>
-            <div>
-              <div class="dd-insight-name">통합분석</div>
-              <div class="dd-insight-desc">최대 3개 단지의 실거래가, 허가내역, AI 예측을 통합 분석합니다.</div>
-            </div>
-          </button>
-          <button class="dd-insight-item" type="button">
-            <span class="dd-insight-icon">🏆</span>
-            <div>
-              <div class="dd-insight-name">면적별 최고가 단지</div>
-              <div class="dd-insight-desc">전용면적 기준 ${district}의 면적별 최고가 단지를 확인하세요.</div>
-            </div>
-          </button>
-        </div>
-      </aside>
     </div>
   `;
 
@@ -844,25 +1205,440 @@ function recordRowHtml(item) {
 
 function renderRecords() {
   const list = document.getElementById("recordList");
-  const today = latestDealDate();
-  const todayRecords = transactions
+  if (!list) return;
+  // 전체 신고가를 상승률 순으로
+  const allRecords = transactions
     .filter(isRecord)
-    .filter((t) => t.dealDate === today)
     .sort((a, b) => recordIncrease(b) - recordIncrease(a));
-  const top10 = todayRecords.slice(0, 10);
-  const remaining = todayRecords.length - 10;
+  const top5 = allRecords.slice(0, 5);
 
-  if (!todayRecords.length) {
-    list.innerHTML = `<div class="transaction-row"><div><h3>${today} 신고가 없음</h3><p>More View에서 날짜별 신고가를 확인하세요.</p></div></div>
-      <button class="more-view-btn" type="button" data-more-type="records">More View <span>날짜별 전체 보기</span></button>`;
+  if (!allRecords.length) {
+    list.innerHTML = `<div class="transaction-row no-data"><div><h3>신고가 없음</h3><p>신고가 거래가 집계되면 표시됩니다.</p></div></div>`;
     return;
   }
 
-  list.innerHTML = top10.map(recordRowHtml).join("") + (remaining > 0 ? `
-    <button class="more-view-btn" type="button" data-more-type="records">
-      More View <span>+${remaining}건 더 보기</span>
+  list.innerHTML = top5.map((item, i) => `
+    <button class="rec-item detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="record">
+      <div class="rank">${i + 1}</div>
+      <div>
+        <div class="rnm">${item.complex}</div>
+        <div class="rdt">${item.district} ${item.dong} · ${item.area.toFixed(0)}㎡ · ${item.dealDate}</div>
+      </div>
+      <div class="rprice">
+        <div class="rpval">${formatPrice(item.price)}</div>
+        <div class="rpchg">${formatRecordGap(item)}</div>
+      </div>
     </button>
-  ` : `<button class="more-view-btn" type="button" data-more-type="records">More View <span>날짜별 전체 보기</span></button>`);
+  `).join("");
+}
+
+/* ── 새로 올라온 거래 ────────────────────────────────── */
+
+function getTabTransactions(tab) {
+  const dates = [...new Set(transactions.map(t => t.dealDate))].sort((a, b) => b.localeCompare(a));
+  if (!dates.length) return [];
+  if (tab === "today") return transactions.filter(t => t.dealDate === dates[0]);
+  if (tab === "yesterday") return transactions.filter(t => t.dealDate === dates[1]);
+  // 이번 주: 최근 7일치
+  const cutoff = dates[Math.min(6, dates.length - 1)];
+  return transactions.filter(t => t.dealDate >= cutoff);
+}
+
+function renderNewClosings() {
+  const tab = newClosingsState.tab;
+  const region = newClosingsState.region;
+  const allItems = getTabTransactions(tab);
+  const filtered = region === "전체" ? allItems : allItems.filter(t => t.district === region);
+  const showAll = newClosingsState.showAll;
+
+  // 지역 필터 pills
+  const regionCounts = {};
+  allItems.forEach(t => { regionCounts[t.district] = (regionCounts[t.district] || 0) + 1; });
+  const regionList = ["전체", ...Object.keys(regionCounts).sort((a, b) => regionCounts[b] - regionCounts[a])];
+
+  const pillsEl = document.getElementById("regionPills");
+  if (pillsEl) pillsEl.innerHTML = regionList.map(r => {
+    const cnt = r === "전체" ? allItems.length : (regionCounts[r] || 0);
+    return `<button class="rpill ${r === region ? "on" : ""}" type="button" data-reg-region="${r}">${r} <em>${cnt}</em></button>`;
+  }).join("");
+
+  // 거래 목록: 평당가 높은 순
+  const sorted = [...filtered].sort((a, b) => pricePerPyeong(b) - pricePerPyeong(a));
+  const visible = showAll ? sorted : sorted.slice(0, 12);
+
+  const listEl = document.getElementById("dealList");
+  if (listEl) listEl.innerHTML = visible.length ? visible.map(item => {
+    const [, cm, cd] = item.dealDate.split("-");
+    return `
+      <button class="di detail-trigger" type="button" data-detail-id="${item.id}" data-detail-context="transaction">
+        <span class="dgu">${item.district}</span>
+        <div>
+          <div class="dname">${item.complex}${isRecord(item) ? '<span class="hibadge">신고가</span>' : ''}${item.permitZone ? '<span class="hibadge" style="background:#fff0e6;color:#e06020">토허</span>' : ''}</div>
+          <div class="dinfo">${item.dong} · ${item.floor}층</div>
+        </div>
+        <span class="darea">${item.area.toFixed(0)}㎡</span>
+        <span class="dprice${isRecord(item) ? ' hi' : ''}">${formatPrice(item.price)}</span>
+        <span class="ddate">${parseInt(cm)}/${parseInt(cd)}</span>
+      </button>
+    `;
+  }).join("") : `<div class="deal-empty">해당 기간에 집계된 거래가 없습니다.</div>`;
+
+  // 더보기 버튼
+  const moreBtn = document.getElementById("regMoreBtn");
+  if (moreBtn) {
+    const remaining = sorted.length - 12;
+    if (!showAll && remaining > 0) {
+      moreBtn.style.display = "";
+      moreBtn.textContent = `+${remaining}건 더 보기 ↓`;
+    } else {
+      moreBtn.style.display = "none";
+    }
+  }
+}
+
+/* ── 갈아타기 후보 실거래 ─────────────────────────────── */
+
+function candidateFilterItems(items) {
+  if (candidateState.filter === "matched") {
+    return items.filter((item) => item.summary.transactionCount > 0);
+  }
+  if (candidateState.filter === "tier1") return items.filter((item) => item.candidate.tier === "1티어");
+  if (candidateState.filter === "tier2") return items.filter((item) => item.candidate.tier === "2티어");
+  if (candidateState.filter === "tier3") return items.filter((item) => item.candidate.tier === "3티어");
+  if (candidateState.filter === "watch") {
+    return items.filter((item) => item.candidate.grade === "관찰" || item.candidate.tier === "관찰");
+  }
+  return items;
+}
+
+function candidateMetaText(candidate) {
+  const parts = [
+    candidate.district,
+    candidate.dongs?.[0],
+    candidate.station,
+    candidate.households ? `${moneyFormatter.format(candidate.households)}세대` : "",
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+function renderCandidateStats(items) {
+  const statsEl = document.getElementById("candidateStats");
+  if (!statsEl) return;
+
+  const matched = items.filter((item) => item.summary.transactionCount > 0);
+  const txCount = items.reduce((sum, item) => sum + item.summary.transactionCount, 0);
+  const latest = matched
+    .map((item) => item.summary.latest)
+    .filter(Boolean)
+    .sort((a, b) => b.dealDate.localeCompare(a.dealDate))[0];
+  const highest = matched
+    .map((item) => item.summary.highest)
+    .filter(Boolean)
+    .sort((a, b) => b.price - a.price)[0];
+
+  statsEl.innerHTML = `
+    <div class="candidate-stat"><span>후보 단지</span><strong>${items.length}개</strong></div>
+    <div class="candidate-stat"><span>거래 매칭</span><strong>${matched.length}개</strong></div>
+    <div class="candidate-stat"><span>실거래 원장</span><strong>${moneyFormatter.format(txCount)}건</strong></div>
+    <div class="candidate-stat"><span>최근 거래</span><strong>${latest ? escapeHtml(latest.dealDate) : "-"}</strong></div>
+  `;
+
+  const desc = document.getElementById("candidateDesc");
+  if (desc) {
+    const fetched = candidateState.fetchedAt ? new Date(candidateState.fetchedAt).toLocaleString("ko-KR") : "";
+    const top = highest ? ` 최고가는 ${escapeHtml(highest.complex)} ${formatPrice(highest.price)}입니다.` : "";
+    desc.textContent = `${candidateState.months}개월 범위의 국토교통부 아파트 매매 실거래를 후보 단지명으로 매칭했습니다.${top}${fetched ? ` ${fetched} 기준.` : ""}`;
+  }
+}
+
+function renderCandidateTabs(items) {
+  const tabsEl = document.getElementById("candidateTabs");
+  if (!tabsEl) return;
+
+  const filters = [
+    ["all", "전체", items.length],
+    ["tier1", "1티어", items.filter((item) => item.candidate.tier === "1티어").length],
+    ["tier2", "2티어", items.filter((item) => item.candidate.tier === "2티어").length],
+    ["tier3", "3티어", items.filter((item) => item.candidate.tier === "3티어").length],
+    ["watch", "관찰", items.filter((item) => item.candidate.grade === "관찰" || item.candidate.tier === "관찰").length],
+    ["matched", "거래 있음", items.filter((item) => item.summary.transactionCount > 0).length],
+  ];
+
+  tabsEl.innerHTML = filters.map(([key, label, count]) => `
+    <button class="rpill ${candidateState.filter === key ? "on" : ""}" type="button" data-candidate-filter="${key}">
+      ${label} <em>${count}</em>
+    </button>
+  `).join("");
+}
+
+function candidateAreaSummary(summary) {
+  if (!summary.areaGroups.length) return "-";
+  return summary.areaGroups
+    .slice(0, 4)
+    .map((group) => `${Math.round(group.area)}㎡ ${formatPrice(group.latestPrice)}`)
+    .join(" · ");
+}
+
+function candidateDetailHtml(item) {
+  const { candidate, summary, transactions: rows } = item;
+  const latest = summary.latest;
+  const highest = summary.highest;
+  const lowest = summary.lowest;
+  const schoolText = candidate.schools?.length ? candidate.schools.join(", ") : "-";
+  const noteText = candidate.notes?.length ? candidate.notes.join(", ") : "-";
+
+  const txRows = rows.length ? rows.map((tx) => `
+    <div class="candidate-tx-row">
+      <span>${escapeHtml(tx.dealDate)}</span>
+      <span>${escapeHtml(tx.complex)} · ${escapeHtml(tx.dong)}</span>
+      <span class="muted">${tx.area.toFixed(2)}㎡</span>
+      <span class="muted">${tx.floor}층</span>
+      <strong>${formatPrice(tx.price)}</strong>
+    </div>
+  `).join("") : `<div class="candidate-empty">조회 범위에 매칭된 실거래가 없습니다. 국토부 단지명이 다르면 별칭 보정이 필요합니다.</div>`;
+
+  return `
+    <div class="candidate-detail-inline">
+      <div class="candidate-info-grid">
+        <div class="candidate-info"><span>API 매칭 단지명</span><strong>${summary.matchedComplexNames.length ? escapeHtml(summary.matchedComplexNames.join(", ")) : "-"}</strong></div>
+        <div class="candidate-info"><span>주소</span><strong>${summary.addresses.length ? escapeHtml(summary.addresses[0]) : escapeHtml(candidateMetaText(candidate))}</strong></div>
+        <div class="candidate-info"><span>준공/세대</span><strong>${summary.builtYear || "-"}${candidate.households ? ` · ${moneyFormatter.format(candidate.households)}세대` : ""}</strong></div>
+        <div class="candidate-info"><span>전용면적별 최근가</span><strong>${escapeHtml(candidateAreaSummary(summary))}</strong></div>
+        <div class="candidate-info"><span>최근 거래</span><strong>${latest ? `${formatPrice(latest.price)} · ${escapeHtml(latest.dealDate)}` : "-"}</strong></div>
+        <div class="candidate-info"><span>최고/최저</span><strong>${highest ? `${formatPrice(highest.price)} / ${formatPrice(lowest.price)}` : "-"}</strong></div>
+        <div class="candidate-info"><span>학군</span><strong>${escapeHtml(schoolText)}</strong></div>
+        <div class="candidate-info"><span>메모</span><strong>${escapeHtml(noteText)}</strong></div>
+      </div>
+      <div>
+        <div class="candidate-tx-head">
+          <div class="candidate-tx-title">조회 범위 전체 실거래 ${moneyFormatter.format(rows.length)}건</div>
+          <div class="candidate-tx-note">${candidateState.months}개월 · 취소거래 제외</div>
+        </div>
+        <div class="candidate-tx-list">${txRows}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCandidateWatchlist() {
+  const listEl = document.getElementById("candidateList");
+  if (!listEl) return;
+
+  renderCandidateStats(candidateState.items);
+  renderCandidateTabs(candidateState.items);
+
+  if (candidateState.loading) {
+    listEl.innerHTML = `<div class="candidate-empty">국토교통부 실거래 API에서 후보 단지 거래를 불러오는 중입니다.</div>`;
+    return;
+  }
+
+  if (candidateState.error) {
+    listEl.innerHTML = `<div class="candidate-empty">${escapeHtml(candidateState.error)}</div>`;
+    return;
+  }
+
+  const visible = candidateFilterItems(candidateState.items);
+  if (!visible.length) {
+    listEl.innerHTML = `<div class="candidate-empty">현재 필터에 해당하는 후보가 없습니다.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = visible.map((item) => {
+    const { candidate, summary } = item;
+    const latest = summary.latest;
+    const isOpen = candidateState.selectedId === candidate.id;
+    const rank = candidate.priority ? `${candidate.priority}위` : candidate.grade;
+    const price = latest ? formatPrice(latest.price) : "거래 없음";
+    const date = latest ? latest.dealDate : "-";
+    const count = summary.transactionCount ? `${moneyFormatter.format(summary.transactionCount)}건` : "0건";
+    const chipItems = [candidate.grade, candidate.tier, candidate.targetPrice].filter(Boolean).slice(0, 3);
+
+    return `
+      <button class="candidate-row ${isOpen ? "open" : ""}" type="button" data-candidate-id="${escapeHtml(candidate.id)}">
+        <span class="candidate-rank">${escapeHtml(rank)}</span>
+        <span>
+          <span class="candidate-name">${escapeHtml(candidate.name)}</span>
+          <span class="candidate-meta">${escapeHtml(candidateMetaText(candidate))}</span>
+          <span class="candidate-chipline">${chipItems.map((chip) => `<span class="candidate-chip">${escapeHtml(chip)}</span>`).join("")}</span>
+        </span>
+        <span class="candidate-price">${price}</span>
+        <span class="candidate-count">${count}</span>
+        <span class="candidate-date">${escapeHtml(date)}</span>
+      </button>
+      ${isOpen ? candidateDetailHtml(item) : ""}
+    `;
+  }).join("");
+}
+
+async function fetchCandidateWatchlist() {
+  candidateState.loading = true;
+  candidateState.error = null;
+  renderCandidateWatchlist();
+
+  try {
+    const res = await fetch(`/api/candidate-transactions?months=${candidateState.months}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+
+    candidateState.items = json.data ?? [];
+    candidateState.fetchedAt = json.fetchedAt ?? null;
+    candidateState.selectedId =
+      candidateState.selectedId ||
+      candidateState.items.find((item) => item.summary.transactionCount > 0)?.candidate.id ||
+      candidateState.items[0]?.candidate.id ||
+      null;
+  } catch (err) {
+    candidateState.error = `후보 실거래 데이터를 불러오지 못했습니다. ${err.message}`;
+  } finally {
+    candidateState.loading = false;
+    renderCandidateWatchlist();
+  }
+}
+
+/* ── 거래량 캘린더 ──────────────────────────────────── */
+
+function renderTxCalendar() {
+  const { year, month, selectedDate } = calTxState;
+  const ym = `${year}-${String(month).padStart(2, "0")}`;
+
+  // 날짜별 거래 건수
+  const dayCounts = {};
+  transactions.filter(t => t.dealDate.startsWith(ym)).forEach(t => {
+    const day = t.dealDate.slice(8);
+    dayCounts[day] = (dayCounts[day] || 0) + 1;
+  });
+
+  const label = document.getElementById("calMonthLabel");
+  if (label) label.textContent = `${year}년 ${month}월`;
+
+  const firstDay = new Date(year, month - 1, 1).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+
+  let html = `<div class="tx-cal-weekdays">${weekdays.map(w => `<span>${w}</span>`).join("")}</div>`;
+  html += `<div class="tx-cal-grid">`;
+
+  for (let i = 0; i < firstDay; i++) {
+    html += `<div class="tx-cal-cell empty"></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayStr = String(d).padStart(2, "0");
+    const dateStr = `${ym}-${dayStr}`;
+    const count = dayCounts[dayStr] || 0;
+    const isSelected = dateStr === selectedDate;
+    const isToday = dateStr === todayDate();
+    const cls = ["tx-cal-cell", count ? "has-data" : "", isSelected ? "selected" : "", isToday ? "today" : ""].filter(Boolean).join(" ");
+    html += `<button class="${cls}" type="button" data-cal-date="${dateStr}">
+      <span class="cal-day-num">${d}</span>
+      ${count ? `<span class="cal-count">${count >= 1000 ? Math.round(count/100)/10 + "k" : count}</span>` : ""}
+    </button>`;
+  }
+
+  html += `</div>`;
+  const grid = document.getElementById("txCalendarGrid");
+  if (grid) grid.innerHTML = html;
+}
+
+/* ── 지역별 거래 (날짜 기준) ────────────────────────── */
+
+function renderRegionDaily(date) {
+  const label = document.getElementById("regionDateLabel");
+  if (label) {
+    const [, m, d] = date.split("-");
+    label.textContent = `${parseInt(m)}월 ${parseInt(d)}일 기준`;
+  }
+
+  const items = transactions.filter(t => t.dealDate === date);
+  const districtOrder = [
+    "강남구","서초구","송파구","강동구","용산구","마포구","성동구","광진구",
+    "강서구","양천구","영등포구","동작구","관악구","은평구","서대문구","종로구",
+    "중구","중랑구","성북구","강북구","도봉구","노원구","동대문구","금천구","구로구",
+  ];
+  const regionCounts = {};
+  items.forEach(t => { regionCounts[t.district] = (regionCounts[t.district] || 0) + 1; });
+
+  const listEl = document.getElementById("regionDailyList");
+  if (!listEl) return;
+
+  if (!items.length) {
+    listEl.innerHTML = `<div class="region-daily-hint">해당 날짜에 등록된 거래가 없습니다.</div>`;
+    return;
+  }
+
+  const sorted = districtOrder
+    .filter(d => regionCounts[d])
+    .concat(Object.keys(regionCounts).filter(d => !districtOrder.includes(d)))
+    .sort((a, b) => (regionCounts[b] || 0) - (regionCounts[a] || 0));
+
+  listEl.innerHTML = sorted.map(district => {
+    const cnt = regionCounts[district] || 0;
+    const distItems = items.filter(t => t.district === district);
+    const maxPrice = Math.max(...distItems.map(t => t.price));
+    const recordCnt = distItems.filter(isRecord).length;
+    return `
+      <button class="region-daily-row" type="button" data-activity-district="${district}">
+        <span class="rdr-name">${district}</span>
+        <span class="rdr-count">${cnt}건</span>
+        <span class="rdr-max">${formatPrice(maxPrice)}</span>
+        ${recordCnt ? `<span class="rdr-badge">신고가 ${recordCnt}</span>` : ""}
+      </button>
+    `;
+  }).join("");
+}
+
+/* ── 전체 실거래 누적 내역 (날짜별 스택) ─────────────── */
+
+function renderTransactionHistory() {
+  const historyEl = document.getElementById("transactionHistory");
+  if (!historyEl) return;
+
+  const today = todayDate();
+  const past = transactions.filter(t => t.dealDate < today);
+
+  if (!past.length) {
+    historyEl.innerHTML = `<div class="transaction-row no-data"><div><h3>이전 거래 내역 없음</h3><p>데이터를 불러오면 날짜별로 쌓입니다.</p></div></div>`;
+    return;
+  }
+
+  const dates = [...new Set(past.map(t => t.dealDate))]
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, 90); // 최근 90일치
+
+  historyEl.innerHTML = dates.map(date => {
+    const items = past.filter(t => t.dealDate === date).sort((a, b) => b.price - a.price);
+    const [, m, d] = date.split("-");
+    const weekday = ["일","월","화","수","목","금","토"][new Date(`${date}T00:00:00`).getDay()];
+    const recordCount = items.filter(isRecord).length;
+    const permitCount = items.filter(t => t.permitZone).length;
+
+    return `
+      <div class="hgrp">
+        <div class="hhdr" role="button" tabindex="0">
+          <div>
+            <span class="hdate">${parseInt(m)}월 ${parseInt(d)}일 ${weekday}요일</span>
+            <span class="hcnt">${items.length}건</span>
+            ${recordCount ? `<span class="htag record">신고가 ${recordCount}</span>` : ""}
+            ${permitCount ? `<span class="htag permit">토허 ${permitCount}</span>` : ""}
+          </div>
+          <svg class="hchev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="hbody">
+          ${items.slice(0, 30).map(item => `
+            <div class="hdeal detail-trigger" role="button" tabindex="0" data-detail-id="${item.id}" data-detail-context="transaction" style="cursor:pointer">
+              <span class="hgu">${item.district}</span>
+              <span>${item.complex}</span>
+              <span style="color:var(--t3);font-size:12px">${item.area.toFixed(0)}㎡</span>
+              <span style="margin-left:auto;font-weight:800${isRecord(item) ? ";color:#E03535" : ""}">${formatPrice(item.price)}</span>
+            </div>
+          `).join("")}
+          ${items.length > 30 ? `<div class="hmore">+${items.length - 30}건 더 있음</div>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+  // 아코디언 이벤트는 wireEvents()에서 한 번만 등록됨
 }
 
 /* ── 전체 신고가 오버레이 ──────────────────────────────── */
@@ -1057,21 +1833,16 @@ function openTransactionsOverlay() {
   txOvState = { month: todayMonth, date: today, view: "district" };
 
   overlay.innerHTML = `
+    <div class="dd-topbar">
+      <button class="dd-back" type="button" id="ddBackBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--t1);padding:8px 14px;border-radius:var(--r2);background:var(--bg);border:1.5px solid var(--div)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+        뒤로가기
+      </button>
+      <span style="font-size:15px;font-weight:800;color:var(--t1)">날짜별 실거래 전체</span>
+    </div>
     <div class="dd-inner" style="grid-template-columns:1fr">
       <div class="dd-main">
-        <div class="dd-breadcrumb">
-          <button class="dd-back" type="button" id="ddBackBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
-            홈으로
-          </button>
-          <span>›</span><span>날짜별 실거래</span>
-        </div>
-        <div class="dd-title-row">
-          <h2 class="dd-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-            날짜별 실거래 전체
-          </h2>
-        </div>
+        <div>
         <div id="txMonthNav">${txMonthNavHtml(todayMonth)}</div>
         <div id="txDayStrip">${txDayStripHtml(todayMonth, today)}</div>
         <div id="txViewTabs">${txViewTabsHtml("district")}</div>
@@ -1126,6 +1897,266 @@ function openTransactionsOverlay() {
   });
 }
 
+/* ── 예산 검색 결과 ───────────────────────────────────── */
+
+const BUDGET_PAGE = 20;
+let budgetPage = 1;
+let budgetFiltered = [];
+
+function renderBudgetResults(totalMan, region) {
+  budgetPage = 1;
+
+  // 총 예산 이하 전체 + 예산의 90% 이상인 것 우선 표시 (딱 맞는 매물 강조)
+  const maxPrice = totalMan;
+  const nearMin  = Math.round(totalMan * 0.85); // 예산 85% 이상이면 "딱 맞는" 가격대
+
+  let filtered = transactions.filter(t => t.price <= maxPrice);
+
+  if (region) {
+    filtered = filtered.filter(t => t.district === region || t.dong?.includes(region));
+  }
+
+  // 단지별로 대표 거래(최신) 1건씩 묶기
+  const seen = new Set();
+  const unique = [];
+  for (const t of filtered) {
+    const key = `${t.complex}|${t.area}`;
+    if (!seen.has(key)) { seen.add(key); unique.push(t); }
+  }
+  // 예산에 가까운 것 먼저 (딱 맞는 가격대 상위 노출)
+  unique.sort((a, b) => b.price - a.price);
+  budgetFiltered = unique;
+
+  const resultEl   = document.getElementById("budgetResults");
+  const titleEl    = document.getElementById("budgetResultTitle");
+  const descEl     = document.getElementById("budgetResultDesc");
+  const countEl    = document.getElementById("budgetResultCount");
+  const listEl     = document.getElementById("budgetDealList");
+  const moreBtn    = document.getElementById("budgetMoreBtn");
+
+  if (!resultEl) return;
+
+  const budgetStr = totalMan >= 10000
+    ? `${Math.floor(totalMan / 10000)}억 ${totalMan % 10000 > 0 ? (totalMan % 10000).toLocaleString() + "만원" : ""}`.trim()
+    : `${totalMan.toLocaleString()}만원`;
+
+  titleEl.textContent = `예산 ${budgetStr} 이하 단지`;
+  descEl.textContent  = region
+    ? `${region} 기준 · 가격 높은 순 정렬`
+    : `서울 전체 기준 · 가격 높은 순 정렬`;
+  countEl.textContent = `${unique.length.toLocaleString()}건`;
+
+  resultEl.style.display = "block";
+
+  function paintPage() {
+    const slice = budgetFiltered.slice(0, budgetPage * BUDGET_PAGE);
+    listEl.innerHTML = slice.length === 0
+      ? `<div style="padding:32px;text-align:center;color:var(--t3);font-size:14px">
+           해당 가격대 거래 단지가 없어요<br>
+           <span style="font-size:12px;margin-top:6px;display:block">예산을 조정하거나 지역 조건을 바꿔보세요</span>
+         </div>`
+      : slice.map(t => {
+          const isNew = t.price > (t.previousHigh || 0);
+          const diff  = t.price - (t.previousHigh || t.price);
+          const diffStr = diff > 0 ? `+${(diff/1000).toFixed(1)}억` : diff < 0 ? `${(diff/1000).toFixed(1)}억` : "전고가";
+          const pct  = totalMan > 0 ? Math.round((t.price / totalMan) * 100) : 0;
+          return `<button class="di" type="button" data-id="${t.id}">
+            <span class="dc">${t.district}</span>
+            <span class="dn">${t.complex} <span class="da">${t.area.toFixed(0)}㎡ ${t.floor}층</span></span>
+            <span class="dd">${t.dealDate.slice(0, 7)}</span>
+            <span class="dp">${(t.price / 10000).toFixed(1)}억
+              <span class="dch ${isNew ? "up" : diff < 0 ? "dn2" : "flat"}">${diffStr}</span>
+            </span>
+            <span class="dbudget-bar" title="예산 대비 ${pct}%">
+              <span class="dbudget-fill" style="width:${Math.min(pct,100)}%"></span>
+            </span>
+          </button>`;
+        }).join("");
+
+    moreBtn.style.display = budgetFiltered.length > budgetPage * BUDGET_PAGE ? "" : "none";
+  }
+
+  paintPage();
+
+  moreBtn.onclick = () => { budgetPage++; paintPage(); };
+
+  // 거래 상세 클릭
+  listEl.addEventListener("click", e => {
+    const btn = e.target.closest("[data-id]");
+    if (!btn) return;
+    const t = transactions.find(x => String(x.id) === btn.dataset.id);
+    if (t) openDetailDialog(t);
+  });
+
+  // 한국부동산원 시세 버튼 — 지역 선택된 경우에만 표시
+  const kreaiBtn = document.getElementById("kreaiPriceBtn");
+  if (kreaiBtn) {
+    kreaiBtn.style.display = region ? "" : "none";
+    kreaiBtn.onclick = () => fetchKreaiPrice(region);
+  }
+}
+
+/* ── 한국부동산원 시세 조회 ──────────────────────────────── */
+
+// 구 이름 → 법정동 코드
+const DISTRICT_CODES_JS = {
+  종로구:"11110",중구:"11140",용산구:"11170",성동구:"11200",광진구:"11215",
+  동대문구:"11230",중랑구:"11260",성북구:"11290",강북구:"11305",도봉구:"11320",
+  노원구:"11350",은평구:"11380",서대문구:"11410",마포구:"11440",양천구:"11470",
+  강서구:"11500",구로구:"11530",금천구:"11545",영등포구:"11560",동작구:"11590",
+  관악구:"11620",서초구:"11650",강남구:"11680",송파구:"11710",강동구:"11740",
+};
+
+async function fetchKreaiPrice(region) {
+  const rowEl = document.getElementById("kreaiPriceRow");
+  const btn   = document.getElementById("kreaiPriceBtn");
+  if (!rowEl) return;
+
+  const lawdCd = DISTRICT_CODES_JS[region];
+  if (!lawdCd) {
+    rowEl.style.display = "";
+    rowEl.innerHTML = `<span style="color:var(--t3);font-size:14px">지역을 구 단위로 선택해주세요 (예: 강남구)</span>`;
+    return;
+  }
+
+  rowEl.style.display = "";
+  rowEl.innerHTML = `<span style="color:var(--t3);font-size:14px">한국부동산원 시세 불러오는 중…</span>`;
+  if (btn) btn.disabled = true;
+
+  const now = new Date();
+  const ym  = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  try {
+    const res  = await fetch(`/api/apt-price?lawdCd=${lawdCd}&dealYmd=${ym}`);
+    const json = await res.json();
+
+    if (!res.ok || json.error) {
+      rowEl.innerHTML = `
+        <div style="padding:14px 0;">
+          <div style="font-size:14px;font-weight:700;color:var(--t1);margin-bottom:6px">📊 한국부동산원 시세</div>
+          <div style="font-size:13px;color:var(--t3);line-height:1.6">
+            API 키가 없어요. 아래 방법으로 발급받고 .env에 추가하면 시세 데이터를 볼 수 있어요.<br>
+            <a href="https://www.data.go.kr/data/15058017/openapi.do" target="_blank" style="color:var(--accent)">data.go.kr → 한국부동산원_아파트매매실거래상세 신청</a><br>
+            발급 후: <code style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:12px">KREAI_API_KEY=발급받은키</code> 를 .env에 추가
+          </div>
+        </div>`;
+      return;
+    }
+
+    const list = json.data || [];
+    if (list.length === 0) {
+      rowEl.innerHTML = `<span style="color:var(--t3);font-size:14px">${region} ${ym} 시세 데이터가 없어요</span>`;
+      return;
+    }
+
+    // 단지별 평균 단가 계산
+    const byComplex = {};
+    for (const item of list) {
+      const nm = item["aptNm"] || item["아파트"] || "알 수 없음";
+      const price = Number(String(item["dealAmount"] || item["거래금액"] || "0").replace(/,/g, ""));
+      const area  = Number(item["excluUseAr"] || item["전용면적"] || 1);
+      if (!byComplex[nm]) byComplex[nm] = { total: 0, count: 0, perSqm: 0 };
+      byComplex[nm].total += price;
+      byComplex[nm].count += 1;
+      byComplex[nm].perSqm = Math.round((byComplex[nm].total / byComplex[nm].count) / area * 3.3);
+    }
+
+    const sorted = Object.entries(byComplex)
+      .map(([nm, d]) => ({ nm, avg: Math.round(d.total / d.count), perSqm: d.perSqm }))
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 6);
+
+    rowEl.innerHTML = `
+      <div style="margin-bottom:10px">
+        <span style="font-size:13px;font-weight:800;color:var(--accent)">📊 한국부동산원 시세</span>
+        <span style="font-size:12px;color:var(--t3);margin-left:8px">${region} · ${ym.slice(0,4)}년 ${ym.slice(4)}월</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${sorted.map(s => `
+          <div style="background:var(--bg);border-radius:var(--r2);padding:10px 14px;min-width:140px">
+            <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:3px">${s.nm}</div>
+            <div style="font-size:16px;font-weight:900;color:var(--t1)">${(s.avg/10000).toFixed(1)}억</div>
+            <div style="font-size:11px;color:var(--t3);margin-top:1px">평당 ${s.perSqm.toLocaleString()}만원</div>
+          </div>
+        `).join("")}
+      </div>`;
+  } catch (e) {
+    rowEl.innerHTML = `<span style="color:var(--t3);font-size:14px">시세 불러오기 실패: ${e.message}</span>`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* ── 토허구역 프리뷰 (메인 카드) ───────────────────────── */
+
+function renderPermitPreview() {
+  const permits = permitTransactions();
+  const latest = latestDealDate();
+  const todayCount = permits.filter(t => t.dealDate === latest).length;
+  const todayEl = document.getElementById("permitTodayCount");
+  const labelEl = document.getElementById("permitDateLabel");
+  if (todayEl) todayEl.textContent = todayCount;
+  if (labelEl) labelEl.textContent = `${latest} 기준`;
+  const distCounts = {};
+  permits.forEach(t => { distCounts[t.district] = (distCounts[t.district] || 0) + 1; });
+  const tags = document.getElementById("permitTagsRow");
+  if (tags) {
+    tags.innerHTML = Object.entries(distCounts)
+      .sort((a, b) => b[1] - a[1]).slice(0, 8)
+      .map(([d, c]) => `<span style="font-size:12px;font-weight:800;padding:5px 12px;background:var(--accent-l);color:var(--accent);border-radius:99px">${d} ${c}</span>`)
+      .join('');
+  }
+}
+
+/* ── 자치구 팝업 ─────────────────────────────────────── */
+
+function initGuDropdown() {
+  const input = document.getElementById("hRegion");
+  const overlay = document.getElementById("guOverlay");
+  const popup = document.getElementById("guPopup");
+  const grid = document.getElementById("guGrid");
+  const closeBtn = document.getElementById("guPopupClose");
+  const clearBtn = document.getElementById("guClear");
+  if (!input || !popup || !grid) return;
+
+  const guList = [
+    "강남구","강동구","강북구","강서구","관악구","광진구","구로구","금천구",
+    "노원구","도봉구","동대문구","동작구","마포구","서대문구","서초구",
+    "성동구","성북구","송파구","양천구","영등포구","용산구","은평구","종로구","중구","중랑구"
+  ];
+
+  grid.innerHTML = guList.map(gu => `<div class="gu-opt" data-gu="${gu}">${gu}</div>`).join("");
+
+  function openPopup() {
+    const rect = input.getBoundingClientRect();
+    popup.style.left = `${rect.left}px`;
+    popup.style.top = `${rect.bottom + 6}px`;
+    popup.style.display = "block";
+    overlay.classList.add("open");
+  }
+  function closePopup() {
+    popup.style.display = "none";
+    overlay.classList.remove("open");
+  }
+
+  input.addEventListener("click", openPopup);
+  overlay.addEventListener("click", closePopup);
+  closeBtn?.addEventListener("click", closePopup);
+  clearBtn?.addEventListener("click", () => {
+    input.value = "";
+    grid.querySelectorAll(".gu-opt").forEach(el => el.classList.remove("sel"));
+    closePopup();
+  });
+  grid.addEventListener("click", (e) => {
+    const opt = e.target.closest("[data-gu]");
+    if (!opt) return;
+    grid.querySelectorAll(".gu-opt").forEach(el => el.classList.remove("sel"));
+    opt.classList.add("sel");
+    input.value = opt.dataset.gu;
+    closePopup();
+  });
+}
+
 /* ── 토허구역 오버레이 ────────────────────────────────── */
 
 function renderPermitsByDate(date) {
@@ -1152,20 +2183,16 @@ function openPermitsOverlay() {
   const countFn = (d) => all.filter((t) => t.dealDate === d).length;
 
   overlay.innerHTML = `
+    <div class="dd-topbar">
+      <button class="dd-back" type="button" id="ddBackBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--t1);padding:8px 14px;border-radius:var(--r2);background:var(--bg);border:1.5px solid var(--div)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
+        뒤로가기
+      </button>
+      <span style="font-size:15px;font-weight:800;color:var(--t1)">날짜별 토지거래허가 내역</span>
+    </div>
     <div class="dd-inner" style="grid-template-columns:1fr">
       <div class="dd-main">
-        <div class="dd-breadcrumb">
-          <button class="dd-back" type="button" id="ddBackBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
-            홈으로
-          </button>
-          <span>›</span><span>날짜별 토허구역</span>
-        </div>
         <div class="dd-title-row">
-          <h2 class="dd-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l4 4v14H7z"/><path d="M17 3v5h4"/><path d="M3 8h4v13H3z"/></svg>
-            날짜별 토지거래허가 내역
-          </h2>
           <span class="dd-date">전체 ${all.length}건</span>
         </div>
         ${overlayDateStripHtml(dates, today, countFn)}
@@ -1303,6 +2330,7 @@ function detailContextLabel(context) {
   if (context === "record") return "NEW HIGH DETAIL";
   if (context === "recommendation") return "MATCH DETAIL";
   if (context === "permit") return "PERMIT DEAL DETAIL";
+  if (context === "listing") return "APARTMENT SEARCH DETAIL";
   return "TRANSACTION DETAIL";
 }
 
@@ -1362,47 +2390,52 @@ function closeDetail() {
 }
 
 function wireEvents() {
-  const form = document.getElementById("assistantForm");
-  const input = document.getElementById("assistantInput");
   const budget = document.getElementById("budgetRange");
   const budgetLabel = document.getElementById("budgetLabel");
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const query = input.value.trim();
-    if (!query) return;
-    runAssistant(query);
-    input.value = "";
-  });
-
-  document.querySelectorAll(".quick-prompts button").forEach((button) => {
-    button.addEventListener("click", () => {
-      const prompt = button.dataset.prompt;
-      input.value = prompt;
-      runAssistant(prompt);
+  if (budget && budgetLabel) {
+    budget.addEventListener("input", () => {
+      state.maxBudget = Number(budget.value);
+      budgetLabel.textContent = `${state.maxBudget}억 이하`;
     });
+  }
+
+  document.getElementById("listingSearchForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    renderListingSearch({ resetPage: true });
+    document.getElementById("propertySearch")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  budget.addEventListener("input", () => {
-    state.maxBudget = Number(budget.value);
-    budgetLabel.textContent = `${state.maxBudget}억`;
-    renderTransactions();
-    renderResults([]);
+  document.getElementById("listingKeyword")?.addEventListener("input", () => {
+    renderListingSearch({ resetPage: true });
   });
 
-  document.getElementById("sortDealsButton").addEventListener("click", () => {
-    state.sortHighFirst = !state.sortHighFirst;
-    renderTransactions();
+  ["listingDistrict", "listingMinPrice", "listingMaxPrice", "listingMinArea", "listingBuiltAfter", "listingSort"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", () => renderListingSearch({ resetPage: true }));
+  });
+
+  document.querySelector(".listing-theme-row")?.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-listing-theme]");
+    if (!btn) return;
+    listingSearchState.theme = btn.dataset.listingTheme;
+    document.querySelectorAll("[data-listing-theme]").forEach((el) => el.classList.remove("on"));
+    btn.classList.add("on");
+    renderListingSearch({ resetPage: true });
+  });
+
+  document.getElementById("listingMoreBtn")?.addEventListener("click", () => {
+    listingSearchState.page++;
+    renderListingSearch();
   });
 
   // 구 활성도 카드 클릭
-  document.getElementById("districtActivityGrid").addEventListener("click", (event) => {
+  document.getElementById("distGrid")?.addEventListener("click", (event) => {
     const card = event.target.closest("[data-activity-district]");
     if (card) openDistrictDetail(card.dataset.activityDistrict);
   });
 
-  // 마켓 카드 메트릭 클릭 → 상세 오버레이
-  document.querySelector(".metric-stack").addEventListener("click", (event) => {
+  // 히어로 메트릭 클릭 → 상세 오버레이
+  document.querySelector(".hero-stats")?.addEventListener("click", (event) => {
     const div = event.target.closest("[data-metric-nav]");
     if (!div) return;
     const type = div.dataset.metricNav;
@@ -1411,13 +2444,101 @@ function wireEvents() {
     else if (type === "permits") openPermitsOverlay();
   });
 
-  // More View 버튼 (신고가 전체 보기)
+  // More View 버튼 (신고가 / 전체 실거래)
   document.body.addEventListener("click", (event) => {
     const moreBtn = event.target.closest("[data-more-type]");
     if (moreBtn) {
       if (moreBtn.dataset.moreType === "records") openRecordsOverlay();
       return;
     }
+  });
+
+  // 누적 내역 More View 버튼
+  document.getElementById("historyMoreBtn")?.addEventListener("click", openTransactionsOverlay);
+
+  // 전체 실거래 누적 내역 — 날짜별 아코디언 (한 번만 등록)
+  document.getElementById("transactionHistory")?.addEventListener("click", (e) => {
+    const header = e.target.closest(".hhdr");
+    if (!header) return;
+    const group = header.closest(".hgrp");
+    group.classList.toggle("open");
+  });
+
+  // 새로 올라온 거래 — 탭 전환
+  document.getElementById("closingsTabs")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-t]");
+    if (!btn) return;
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    newClosingsState.tab = btn.dataset.t;
+    newClosingsState.region = "전체";
+    newClosingsState.showAll = false;
+    renderNewClosings();
+    renderMetrics();
+  });
+
+  // 새로 올라온 거래 — 지역 필터 pills
+  document.getElementById("regionPills")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-reg-region]");
+    if (!btn) return;
+    newClosingsState.region = btn.dataset.regRegion;
+    newClosingsState.showAll = false;
+    document.querySelectorAll("#regionPills .rpill").forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    renderNewClosings();
+  });
+
+  // 갈아타기 후보 — 필터/행 열기/기간 변경
+  document.getElementById("candidateTabs")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-candidate-filter]");
+    if (!btn) return;
+    candidateState.filter = btn.dataset.candidateFilter;
+    renderCandidateWatchlist();
+  });
+
+  document.getElementById("candidateList")?.addEventListener("click", (e) => {
+    const row = e.target.closest("[data-candidate-id]");
+    if (!row) return;
+    candidateState.selectedId = candidateState.selectedId === row.dataset.candidateId ? null : row.dataset.candidateId;
+    renderCandidateWatchlist();
+  });
+
+  document.getElementById("candidateMonths")?.addEventListener("change", (e) => {
+    candidateState.months = Number(e.target.value) || 36;
+    candidateState.selectedId = null;
+    fetchCandidateWatchlist();
+  });
+
+  document.getElementById("candidateRefreshBtn")?.addEventListener("click", () => {
+    candidateState.selectedId = null;
+    fetchCandidateWatchlist();
+  });
+
+  // 새로 올라온 거래 — 더보기
+  document.getElementById("regMoreBtn")?.addEventListener("click", () => {
+    newClosingsState.showAll = true;
+    renderNewClosings();
+  });
+
+  // 거래량 캘린더 — 날짜 클릭
+  document.getElementById("txCalendarGrid")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-cal-date]");
+    if (!btn) return;
+    calTxState.selectedDate = btn.dataset.calDate;
+    renderTxCalendar();
+    renderRegionDaily(calTxState.selectedDate);
+  });
+
+  // 거래량 캘린더 — 월 이동
+  document.getElementById("calPrevBtn")?.addEventListener("click", () => {
+    calTxState.month--;
+    if (calTxState.month < 1) { calTxState.month = 12; calTxState.year--; }
+    renderTxCalendar();
+  });
+  document.getElementById("calNextBtn")?.addEventListener("click", () => {
+    calTxState.month++;
+    if (calTxState.month > 12) { calTxState.month = 1; calTxState.year++; }
+    renderTxCalendar();
   });
 
   // ESC로 오버레이 닫기
@@ -1452,11 +2573,10 @@ function wireEvents() {
     openDetail(trigger.dataset.detailId, trigger.dataset.detailContext);
   });
 
-  document.getElementById("detailClose").addEventListener("click", closeDetail);
-  document.getElementById("detailDialog").addEventListener("click", (event) => {
+  document.getElementById("detailClose")?.addEventListener("click", closeDetail);
+  document.getElementById("detailDialog")?.addEventListener("click", (event) => {
     if (event.target.id === "detailDialog") closeDetail();
   });
-
 }
 
 function applyTransactions(data) {
@@ -1472,11 +2592,15 @@ function applyTransactions(data) {
 
   renderMetrics();
   renderDistricts();
-  renderTransactions();
+  renderListingDistrictOptions();
+  renderListingSearch({ resetPage: true });
+  renderNewClosings();
   renderRecords();
-  renderPermits();
-  renderResults([]);
+  renderTransactionHistory();
+  renderPermitPreview();
   renderDistrictActivity();
+  renderAskingSignals();
+  renderCandidateWatchlist();
 }
 
 const LS_KEY = "seoul_estate_v1";
@@ -1504,7 +2628,7 @@ async function fetchAndUpdateCache(statusEl) {
 
     if (json.fallback) {
       if (state.dataSource !== "molit") {
-        statusEl.textContent = "샘플 데이터";
+        if (statusEl) statusEl.textContent = "샘플 데이터";
         addMessage("국토교통부 API 키가 설정되지 않아 샘플 데이터로 동작합니다. .env 파일에 MOLIT_API_KEY를 추가하세요.", "assistant");
       }
       return;
@@ -1515,12 +2639,12 @@ async function fetchAndUpdateCache(statusEl) {
       applyTransactions(json.data);
       state.dataSource = "molit";
       const fetched = new Date(json.fetchedAt).toLocaleTimeString("ko-KR");
-      statusEl.textContent = `실데이터 ${json.data.length.toLocaleString()}건`;
+      if (statusEl) statusEl.textContent = `실데이터 ${json.data.length.toLocaleString()}건`;
       addMessage(`국토교통부 실거래 데이터 ${json.data.length.toLocaleString()}건이 로드됐습니다 (${fetched} 기준). 원하는 지역, 예산, 면적, 준공연도를 말해 주세요.`, "assistant");
     }
   } catch (err) {
     if (state.dataSource !== "molit") {
-      statusEl.textContent = "샘플 데이터";
+      if (statusEl) statusEl.textContent = "샘플 데이터";
       console.info("[Seoul Estate AI] 로컬 서버 없음 — 샘플 데이터로 동작:", err.message);
     }
   }
@@ -1533,28 +2657,69 @@ async function loadRealData() {
   if (cached?.length) {
     applyTransactions(cached);
     state.dataSource = "molit";
-    statusEl.textContent = `캐시 ${cached.length.toLocaleString()}건`;
+    if (statusEl) statusEl.textContent = `캐시 ${cached.length.toLocaleString()}건`;
     addMessage(`캐시된 실거래 데이터 ${cached.length.toLocaleString()}건을 즉시 로드했습니다. 백그라운드에서 최신 데이터를 확인 중입니다.`, "assistant");
     fetchAndUpdateCache(statusEl); // 백그라운드 갱신, await 없음
     return;
   }
 
-  statusEl.textContent = "데이터 로딩 중…";
+  if (statusEl) statusEl.textContent = "데이터 로딩 중…";
   await fetchAndUpdateCache(statusEl);
 }
 
 async function init() {
   state.selectedPermitDate = latestDealDate();
+
+  // 히어로 날짜 표시
+  const heroDate = document.getElementById("heroDate");
+  if (heroDate) heroDate.textContent = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" }) + " 기준";
+
   renderMetrics();
   renderDistricts();
-  renderTransactions();
+  renderListingDistrictOptions();
+  renderListingSearch({ resetPage: true });
+  renderNewClosings();
   renderRecords();
-  renderPermits();
-  renderResults([]);
+  renderTransactionHistory();
+  renderPermitPreview();
   renderDistrictActivity();
-  wireEvents();
-  addMessage("데이터를 불러오는 중입니다…", "assistant");
+  renderAskingSignals();
+
+  try { wireEvents(); } catch (e) { console.warn("[wireEvents]", e); }
+  initGuDropdown();
+
+  // 히어로 제출 버튼 — 예산 검색
+  document.getElementById("heroSubmit")?.addEventListener("click", () => {
+    const capEok  = Number(document.getElementById("hCapEok")?.value  || 0);
+    const capMan  = Number(document.getElementById("hCapMan")?.value  || 0);
+    const loanEok = Number(document.getElementById("hLoanEok")?.value || 0);
+    const loanMan = Number(document.getElementById("hLoanMan")?.value || 0);
+    const region  = document.getElementById("hRegion")?.value?.trim() || "";
+
+    const totalMan = capEok * 10000 + capMan + loanEok * 10000 + loanMan;
+
+    if (totalMan > 0) {
+      renderBudgetResults(totalMan, region);
+      document.getElementById("budgetResults")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      // 예산 미입력 시 지역 필터만
+      if (region) {
+        state.selectedDistrict = region;
+        renderDistricts();
+      }
+      document.getElementById("closings")?.scrollIntoView({ behavior: "smooth" });
+    }
+  });
+
+  // 토허 프리뷰 카드 클릭
+  document.getElementById("permits")?.addEventListener("click", openPermitsOverlay);
+  document.getElementById("permitPreviewBtn")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openPermitsOverlay();
+  });
+
   await loadRealData();
+  fetchCandidateWatchlist();
 }
 
 init();

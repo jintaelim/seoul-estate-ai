@@ -1,0 +1,37 @@
+import { useMemo, useState } from "react";
+import { latestDate } from "../utils";
+
+export default function Hero({ transactions, onBudgetSearch }) {
+  const [form, setForm] = useState({ capital: "", loan: "", district: "전체" });
+  const districts = useMemo(() => ["전체", ...new Set(transactions.map((item) => item.district))], [transactions]);
+  const date = latestDate(transactions);
+  const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  return (
+    <section className="hero" id="top">
+      <div className="hero-top">
+        <div>
+          <div className="hero-headline"><span /> SEOUL TRANSACTION RADAR</div>
+          <h1 className="hero-title">서울 아파트,<br /><em>움직인 가격</em>부터 봅니다.</h1>
+          <p className="hero-lead">실거래 원장과 토지거래허가 내역을 한 흐름으로 확인하고<br className="desktop-only" /> 내 예산에 맞는 다음 단지를 빠르게 좁혀보세요.</p>
+        </div>
+        <div className="hero-asof"><span>DATA AS OF</span><strong>{date || "불러오는 중"}</strong><small>국토교통부 신고 기준</small></div>
+      </div>
+      <form className="hero-search" onSubmit={(event) => {
+        event.preventDefault();
+        onBudgetSearch({ budget: (Number(form.capital) + Number(form.loan)) * 10000, district: form.district });
+      }}>
+        <div className="hero-search-title">
+          <span className="search-step">01</span>
+          <span><span className="kicker">BUDGET COMPASS</span><strong className="hero-search-heading">내 예산이 닿는 서울 찾기</strong><small className="hero-search-desc">자본금 + 대출 가능액으로 최근 거래를 바로 거릅니다.</small></span>
+        </div>
+        <div className="hero-search-bar">
+          <label className="hseg"><span className="hseg-label">자본금</span><input className="hseg-input" type="number" min="0" placeholder="0" value={form.capital} onChange={update("capital")} /><span className="hseg-unit">억</span></label>
+          <label className="hseg"><span className="hseg-label">예상 대출금</span><input className="hseg-input" type="number" min="0" placeholder="0" value={form.loan} onChange={update("loan")} /><span className="hseg-unit">억</span></label>
+          <label className="hseg district-segment"><span className="hseg-label">관심 지역</span><select className="hseg-input" value={form.district} onChange={update("district")}>{districts.map((district) => <option key={district}>{district}</option>)}</select></label>
+          <button className="hero-submit-inline" type="submit"><span>검색 결과 보기</span><b>→</b></button>
+        </div>
+      </form>
+    </section>
+  );
+}

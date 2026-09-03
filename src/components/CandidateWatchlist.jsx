@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ActionButton, Chip } from "@seed-design/react";
 import { fetchCandidates } from "../services/estateApi";
 import { formatPrice } from "../utils";
 import { SectionHeader } from "./Common";
@@ -33,14 +34,14 @@ export default function CandidateWatchlist() {
 
   return (
     <section className="card" id="candidateWatch">
-      <SectionHeader eyebrow="MOVE-UP WATCHLIST" title="갈아타기 후보 실거래" description={`${months}개월 범위에서 후보 단지명과 국토부 원장을 매칭합니다.`} action={<div className="candidate-actions"><select className="candidate-select" value={months} onChange={(event) => setMonths(Number(event.target.value))}><option value="12">최근 12개월</option><option value="36">최근 36개월</option><option value="60">최근 60개월</option><option value="120">최근 120개월</option></select><button className="tsearch" type="button" onClick={() => setRefreshKey((key) => key + 1)}>새로고침</button></div>} />
+      <SectionHeader eyebrow="MOVE-UP WATCHLIST" title="갈아타기 후보 실거래" description={`${months}개월 범위에서 후보 단지명과 국토부 원장을 매칭합니다.`} action={<div className="candidate-actions"><select className="candidate-select" value={months} onChange={(event) => setMonths(Number(event.target.value))}><option value="12">최근 12개월</option><option value="36">최근 36개월</option><option value="60">최근 60개월</option><option value="120">최근 120개월</option></select><ActionButton className="tsearch" variant="neutralWeak" size="small" type="button" onClick={() => setRefreshKey((key) => key + 1)}>새로고침</ActionButton></div>} />
       <div className="candidate-stats">
         <div className="candidate-stat"><span>후보 단지</span><strong>{state.items.length}개</strong></div>
         <div className="candidate-stat"><span>거래 매칭</span><strong>{matched}개</strong></div>
         <div className="candidate-stat"><span>실거래 원장</span><strong>{txCount.toLocaleString("ko-KR")}건</strong></div>
         <div className="candidate-stat"><span>조회 상태</span><strong>{state.loading ? "조회 중" : state.error ? "연결 실패" : "완료"}</strong></div>
       </div>
-      <div className="rpills candidate-tabs">{filterLabels.map(([key, label]) => <button className={`rpill ${filter === key ? "on" : ""}`} type="button" key={key} onClick={() => setFilter(key)}>{label}</button>)}</div>
+      <div className="rpills candidate-tabs">{filterLabels.map(([key, label]) => <Chip.Root className={`rpill ${filter === key ? "on" : ""}`} variant={filter === key ? "solid" : "outlineWeak"} size="small" type="button" key={key} onClick={() => setFilter(key)}><Chip.Label>{label}</Chip.Label></Chip.Root>)}</div>
       <div className="candidate-list">
         {state.loading && <div className="candidate-empty">후보 단지 실거래를 불러오는 중입니다.</div>}
         {state.error && <div className="candidate-empty">{state.error}<br />API 서버가 실행 중인지 확인하세요.</div>}

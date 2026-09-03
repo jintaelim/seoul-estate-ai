@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ActionButton, Chip } from "@seed-design/react";
 import { formatPrice, isRecord, latestDate, pricePerPyeong, representativeTransactions } from "../utils";
 import { SectionHeader } from "./Common";
 
@@ -55,8 +56,8 @@ export default function PropertySearch({ transactions, source, initialBudget, on
         <label><span>정렬</span><select value={filters.sort} onChange={update("sort")}><option value="latest">최신 거래순</option><option value="priceDesc">가격 높은순</option><option value="priceAsc">가격 낮은순</option><option value="activity">거래 많은순</option></select></label>
       </div>
       <div className="search-tool-row">
-        <div className="listing-theme-row">{themes.map(([key, label]) => <button className={`rpill ${filters.theme === key ? "on" : ""}`} type="button" key={key} onClick={() => { setFilters((current) => ({ ...current, theme: key })); setLimit(8); }}>{label}</button>)}</div>
-        <button className="filter-reset" type="button" onClick={() => { setFilters(defaultFilters); setLimit(8); }}>조건 초기화</button>
+        <div className="listing-theme-row">{themes.map(([key, label]) => <Chip.Root className={`rpill ${filters.theme === key ? "on" : ""}`} variant={filters.theme === key ? "solid" : "outlineWeak"} size="small" type="button" key={key} onClick={() => { setFilters((current) => ({ ...current, theme: key })); setLimit(8); }}><Chip.Label>{label}</Chip.Label></Chip.Root>)}</div>
+        <ActionButton className="filter-reset" variant="ghost" size="xsmall" type="button" onClick={() => { setFilters(defaultFilters); setLimit(8); }}>조건 초기화</ActionButton>
       </div>
       {initialBudget?.budget > 0 && !filters.max && <div className="applied-filter"><span>예산 검색 적용 중</span><strong>{initialBudget.district !== "전체" ? `${initialBudget.district} · ` : ""}{formatPrice(initialBudget.budget)} 이하</strong></div>}
       <div className="search-summary">
@@ -76,7 +77,7 @@ export default function PropertySearch({ transactions, source, initialBudget, on
           </button>
         ))}
       </div>
-      {limit < rows.length && <button className="morebtn" type="button" onClick={() => setLimit((value) => value + 8)}>+{rows.length - limit}건 더 보기 ↓</button>}
+      {limit < rows.length && <ActionButton className="morebtn" variant="neutralWeak" size="large" type="button" onClick={() => setLimit((value) => value + 8)}>+{rows.length - limit}건 더 보기</ActionButton>}
       {!rows.length && <div className="listing-empty"><h3>조건에 맞는 거래가 없습니다.</h3><p>지역이나 가격 범위를 넓혀보세요.</p></div>}
     </section>
   );

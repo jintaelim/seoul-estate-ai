@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 export default function Header() {
   return (
     <header className="topbar">
@@ -19,5 +21,11 @@ export default function Header() {
 
 export function MobileNav() {
   const items = [["#top", "홈", "⌂"], ["#closings", "실거래", "거"], ["#propertySearch", "검색", "⌕"], ["#records", "신고가", "↑"], ["#permits", "토허", "허"]];
-  return <nav className="mobile-nav" aria-label="모바일 메뉴">{items.map(([href, label, icon]) => <a href={href} key={href}><b>{icon}</b><span>{label}</span></a>)}</nav>;
+  const [active, setActive] = useState(window.location.hash || "#top");
+  useEffect(() => {
+    const update = () => setActive(window.location.hash || "#top");
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  return <nav className="mobile-nav" aria-label="모바일 메뉴">{items.map(([href, label, icon]) => <a className={active === href ? "active" : ""} href={href} aria-current={active === href ? "page" : undefined} key={href}><b>{icon}</b><span>{label}</span></a>)}</nav>;
 }

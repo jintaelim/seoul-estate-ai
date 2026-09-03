@@ -1,3 +1,4 @@
+import { Badge } from "@seed-design/react";
 import { formatPrice, isRecord } from "../utils";
 
 export function SectionHeader({ eyebrow, title, description, action }) {
@@ -21,8 +22,8 @@ export function DealRow({ item, onSelect }) {
       <span>
         <span className="dname">
           {item.complex}
-          {isRecord(item) && <span className="hibadge">신고가</span>}
-          {item.permitZone && <span className="hibadge permit-badge">토허</span>}
+          {isRecord(item) && <Badge className="hibadge" size="medium" variant="weak" tone="critical">신고가</Badge>}
+          {item.permitZone && <Badge className="hibadge permit-badge" size="medium" variant="weak" tone="warning">토허</Badge>}
         </span>
         <span className="dinfo">{item.dong} · {item.floor}층</span>
       </span>

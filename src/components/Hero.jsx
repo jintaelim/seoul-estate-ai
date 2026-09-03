@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ActionButton } from "@seed-design/react";
 import { latestDate } from "../utils";
 
 export default function Hero({ transactions, onBudgetSearch }) {
@@ -22,14 +23,14 @@ export default function Hero({ transactions, onBudgetSearch }) {
         onBudgetSearch({ budget: (Number(form.capital) + Number(form.loan)) * 10000, district: form.district });
       }}>
         <div className="hero-search-title">
-          <span className="search-step">01</span>
+          <span className="search-step">예산</span>
           <span><span className="kicker">BUDGET COMPASS</span><strong className="hero-search-heading">내 예산이 닿는 서울 찾기</strong><small className="hero-search-desc">자본금 + 대출 가능액으로 최근 거래를 바로 거릅니다.</small></span>
         </div>
         <div className="hero-search-bar">
           <label className="hseg"><span className="hseg-label">자본금</span><input className="hseg-input" type="number" min="0" placeholder="0" value={form.capital} onChange={update("capital")} /><span className="hseg-unit">억</span></label>
           <label className="hseg"><span className="hseg-label">예상 대출금</span><input className="hseg-input" type="number" min="0" placeholder="0" value={form.loan} onChange={update("loan")} /><span className="hseg-unit">억</span></label>
           <label className="hseg district-segment"><span className="hseg-label">관심 지역</span><select className="hseg-input" value={form.district} onChange={update("district")}>{districts.map((district) => <option key={district}>{district}</option>)}</select></label>
-          <button className="hero-submit-inline" type="submit"><span>검색 결과 보기</span><b>→</b></button>
+          <ActionButton className="hero-submit-inline" variant="neutralSolid" size="large" type="submit"><span>검색 결과 보기</span><b>→</b></ActionButton>
         </div>
       </form>
     </section>

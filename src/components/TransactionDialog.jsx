@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { Badge } from "@seed-design/react";
 import { formatPrice, isRecord, pricePerPyeong, pyeong } from "../utils";
 
 const sameUnit = (candidate, item) => candidate.district === item.district
@@ -86,7 +87,7 @@ export default function TransactionDialog({ item, transactions, onClose }) {
         <article className="detail-panel">
           <header className="detail-header">
             <div><span className="kicker">APARTMENT LEDGER</span><h2>{item.complex}</h2><p>{item.address || `서울 ${item.district} ${item.dong}`}</p></div>
-            <div className="detail-header-tags">{isRecord(item) && <span className="status-tag record">신고가</span>}{item.permitZone && <span className="status-tag permit">토허구역</span>}</div>
+            <div className="detail-header-tags">{isRecord(item) && <Badge className="status-tag record" variant="weak" tone="critical">신고가</Badge>}{item.permitZone && <Badge className="status-tag permit" variant="weak" tone="warning">토허구역</Badge>}</div>
             <button className="dialog-close" type="button" onClick={onClose} aria-label="상세 닫기">×</button>
           </header>
 

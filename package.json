@@ -10,12 +10,15 @@
     "check": "vite build"
   },
   "dependencies": {
+    "@seed-design/css": "^2.6.2",
+    "@seed-design/react": "^2.4.1",
     "express": "^4.19.2",
     "fast-xml-parser": "^4.4.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@seed-design/vite-plugin": "^2.1.0",
     "@vitejs/plugin-react": "^5.0.2",
     "concurrently": "^9.2.1",
     "vite": "^7.1.3"

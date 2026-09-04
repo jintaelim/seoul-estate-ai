@@ -207,9 +207,9 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
 
 /* Single palette: ink / paper / cobalt signal. Semantic colors stay distinct but restrained. */
 :root, :root[data-seed-color-mode="light-only"] {
-  --accent: #2457e6;
-  --accent-dark: #183fb3;
-  --accent-l: #e9efff;
+  --accent: #3638de;
+  --accent-dark: #2929ad;
+  --accent-l: #eef0ff;
   --bg: #f4f6f8;
   --bg2: #edf0f4;
   --card: #ffffff;
@@ -229,11 +229,11 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
   --seed-color-bg-neutral-solid: #111318;
   --seed-color-bg-neutral-inverted: #111318;
   --seed-color-bg-neutral-inverted-pressed: #2b303a;
-  --seed-color-bg-brand-solid: #2457e6;
-  --seed-color-bg-brand-solid-pressed: #183fb3;
-  --seed-color-bg-brand-weak: #e9efff;
-  --seed-color-bg-brand-weak-pressed: #dce5ff;
-  --seed-color-bg-informative-weak: #e9efff;
+  --seed-color-bg-brand-solid: #3638de;
+  --seed-color-bg-brand-solid-pressed: #2929ad;
+  --seed-color-bg-brand-weak: #eef0ff;
+  --seed-color-bg-brand-weak-pressed: #e2e3ff;
+  --seed-color-bg-informative-weak: #eef0ff;
   --seed-color-bg-critical-weak: #fff0f2;
   --seed-color-bg-warning-weak: #fff6e8;
   --seed-color-bg-positive-weak: #e8f6f2;
@@ -241,17 +241,17 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
   --seed-color-fg-neutral-muted: #596273;
   --seed-color-fg-neutral-subtle: #8791a1;
   --seed-color-fg-neutral-inverted: #ffffff;
-  --seed-color-fg-brand: #2457e6;
+  --seed-color-fg-brand: #3638de;
   --seed-color-fg-brand-contrast: #ffffff;
-  --seed-color-fg-informative: #2457e6;
+  --seed-color-fg-informative: #3638de;
   --seed-color-fg-critical: #d9485f;
   --seed-color-fg-warning: #a96a12;
   --seed-color-fg-positive: #147d68;
   --seed-color-stroke-neutral-muted: #e1e6ed;
   --seed-color-stroke-neutral-subtle: #edf0f4;
   --seed-color-stroke-neutral-weak: #cbd3de;
-  --seed-color-stroke-brand-solid: #2457e6;
-  --seed-color-stroke-brand-weak: #b9c9ff;
+  --seed-color-stroke-brand-solid: #3638de;
+  --seed-color-stroke-brand-weak: #bfc1fa;
   --seed-shadow-s1: 0 1px 2px rgba(17,19,24,.04), 0 10px 28px rgba(17,19,24,.04);
   --seed-shadow-s2: 0 18px 50px rgba(17,19,24,.12);
   --seed-shadow-s3: 0 20px 60px rgba(17,19,24,.18);

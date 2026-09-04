@@ -11,6 +11,7 @@ const changeRate = (current, previous) => previous ? ((current / previous) - 1) 
 const signedRate = (rate) => `${rate > 0 ? "+" : ""}${rate.toFixed(1)}%`;
 
 function TrendChart({ items, rentItems = [] }) {
+  const [active, setActive] = useState(null);
   if (items.length < 2 && rentItems.length < 2) {
     return <div className="detail-chart-empty"><span>—</span><p>동일 면적 거래가 더 쌓이면 가격 추이를 보여드립니다.</p></div>;
   }
@@ -31,6 +32,7 @@ function TrendChart({ items, rentItems = [] }) {
   const line = points.map((point) => `${point.x},${point.y}`).join(" ");
   const area = `${padX},${height - padY} ${line} ${width - padX},${height - padY}`;
   const rentPoints = rentItems.map((entry, index) => ({ ...entry, x: padX + (index / Math.max(rentItems.length - 1, 1)) * (width - padX * 2), y: padY + ((max - entry.deposit) / range) * (height - padY * 2) }));
+  const activePoint = active?.kind === "rent" ? rentPoints[active.index] : points[active?.index ?? -1];
 
   return (
     <div className="detail-chart-wrap">
@@ -43,9 +45,10 @@ function TrendChart({ items, rentItems = [] }) {
         <polygon points={area} fill="url(#transactionArea)" />
         <polyline className="detail-chart-line" points={line} />
         {rentPoints.length > 1 && <polyline className="detail-chart-rent-line" points={rentPoints.map((point) => `${point.x},${point.y}`).join(" ")} />}
-        {points.map((point, index) => <circle className={index === points.length - 1 ? "latest" : ""} cx={point.x} cy={point.y} r={index === points.length - 1 ? 5 : 3} key={point.id} />)}
-        {rentPoints.map((point, index) => <circle className="rent-point" cx={point.x} cy={point.y} r={index === rentPoints.length - 1 ? 5 : 3} key={point.id} />)}
+        {points.map((point, index) => <circle className={index === points.length - 1 ? "latest" : ""} cx={point.x} cy={point.y} r={index === points.length - 1 ? 5 : 3} key={point.id} tabIndex="0" role="button" aria-label={`매매 ${point.dealDate} ${formatPrice(point.price)}`} onMouseEnter={() => setActive({ kind: "sale", index })} onFocus={() => setActive({ kind: "sale", index })} onMouseLeave={() => setActive(null)} onClick={() => setActive((current) => current?.kind === "sale" && current.index === index ? null : { kind: "sale", index })} />)}
+        {rentPoints.map((point, index) => <circle className="rent-point" cx={point.x} cy={point.y} r={index === rentPoints.length - 1 ? 5 : 3} key={point.id} tabIndex="0" role="button" aria-label={`전세 ${point.dealDate} ${formatPrice(point.deposit)}`} onMouseEnter={() => setActive({ kind: "rent", index })} onFocus={() => setActive({ kind: "rent", index })} onMouseLeave={() => setActive(null)} onClick={() => setActive((current) => current?.kind === "rent" && current.index === index ? null : { kind: "rent", index })} />)}
       </svg>
+      {activePoint && <div className={`detail-chart-tooltip ${active?.kind === "rent" ? "rent" : "sale"}`} style={{ left: `${(activePoint.x / width) * 100}%`, top: `${(activePoint.y / height) * 100}%` }}><strong>{active?.kind === "rent" ? "전세 보증금" : "매매 실거래"}</strong><b>{formatPrice(active?.kind === "rent" ? activePoint.deposit : activePoint.price)}</b><span>{activePoint.dealDate} · {activePoint.area.toFixed(0)}㎡{activePoint.floor ? ` · ${activePoint.floor}층` : ""}</span></div>}
       <div className="detail-chart-dates"><span>{(items[0] ?? rentItems[0]).dealDate}</span><span>{(items.at(-1) ?? rentItems.at(-1)).dealDate}</span></div>
       <div className="detail-chart-legend"><span className="sale">● 매매 실거래</span><span className="rent">● 전세 보증금</span></div>
     </div>

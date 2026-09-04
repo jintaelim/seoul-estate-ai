@@ -17,12 +17,16 @@ export default function LoanCalculator() {
   const result = useMemo(() => {
     const price = Number(form.price) * 10000;
     const income = Number(form.income) * 10000;
+    const existingBalance = Number(form.existingBalance) * 10000;
     const existingPayment = Number(form.existingPayment) * 10000;
     if (!price || !income) return null;
     const ltvRate = form.firstHome === "yes" ? 0.8 : 0.7;
     const ltvLimit = price * ltvRate;
     const dsrLimit = income * 0.4;
-    const availableAnnual = Math.max(0, dsrLimit - existingPayment * 12);
+    // If the user does not know the annual payment, estimate a conservative
+    // 10-year amortization from the remaining balance for the preview.
+    const estimatedExistingAnnual = existingPayment || monthlyPayment(existingBalance, 5, 10) * 12;
+    const availableAnnual = Math.max(0, dsrLimit - estimatedExistingAnnual);
     const monthlyCap = availableAnnual / 12;
     const factor = monthlyPayment(10000, Number(form.rate) || 0, Number(form.years) || 30);
     const dsrLoan = factor ? monthlyCap / factor * 10000 : 0;

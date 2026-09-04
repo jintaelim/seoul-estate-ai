@@ -57,12 +57,19 @@ export function PermitPreview({ transactions, onSelect }) {
   const permits = transactions.filter((item) => item.permitZone);
   const zones = [...new Set(permits.map((item) => item.permitZone))];
   const districts = ["전체", ...new Set(transactions.map((item) => item.district).filter(Boolean).sort())];
+  const permitDates = [...new Set(permits.map((item) => item.dealDate))].sort().reverse().slice(0, 14);
   const [zone, setZone] = useState("전체");
   const [district, setDistrict] = useState("전체");
+  const [date, setDate] = useState("all");
   const [limit, setLimit] = useState(8);
-  const visible = permits.filter((item) => (zone === "전체" || item.permitZone === zone) && (district === "전체" || item.district === district));
+  const visible = permits.filter((item) => (zone === "전체" || item.permitZone === zone) && (district === "전체" || item.district === district) && (date === "all" || item.dealDate === date));
   const selectDistrict = (value) => { setDistrict(value); setLimit(8); };
   const selectZone = (value) => { setZone(value); setLimit(8); };
+  const selectDate = (value) => { setDate(value); setLimit(8); };
+  const dateLabel = (value) => {
+    const parsed = new Date(`${value}T00:00:00Z`);
+    return { month: parsed.getUTCMonth() + 1, day: parsed.getUTCDate(), weekday: new Intl.DateTimeFormat("ko-KR", { weekday: "short", timeZone: "UTC" }).format(parsed) };
+  };
   return (
     <section className="card permit-section" id="permits">
       <SectionHeader
@@ -71,9 +78,13 @@ export function PermitPreview({ transactions, onSelect }) {
         description="서울 자치구와 허가구역을 함께 선택해 거래를 좁혀봅니다."
         action={<div className="permit-header-actions"><SeedSelect className="permit-district-select" label="자치구 선택" value={district} onChange={selectDistrict} options={districts} /><span className="permit-count"><b>{visible.length.toLocaleString("ko-KR")}</b>건 <small>/ {zones.length}개 구역</small></span></div>}
       />
+      <div className="permit-date-strip" aria-label="토지허가거래 기준일 선택">
+        <button className={date === "all" ? "on all-date" : "all-date"} type="button" onClick={() => selectDate("all")}><small>기간</small><strong>전체</strong></button>
+        {permitDates.map((value) => { const label = dateLabel(value); return <button className={date === value ? "on" : ""} type="button" key={value} onClick={() => selectDate(value)}><small>{label.weekday}</small><strong>{label.day}</strong><i>{label.month}월</i></button>; })}
+      </div>
       <div className="permit-notice"><span className="notice-mark">!</span><p><strong>허가 여부가 아닌 구역 내 실거래입니다.</strong><small>실제 허가 상태와 이용 목적은 관할 구청 자료를 함께 확인하세요.</small></p></div>
       <div className="permit-zone-tabs"><button className={zone === "전체" ? "on" : ""} type="button" onClick={() => selectZone("전체")}>전체 <b>{permits.filter((item) => district === "전체" || item.district === district).length}</b></button>{zones.map((name) => <button className={zone === name ? "on" : ""} type="button" key={name} onClick={() => selectZone(name)}>{name} <b>{permits.filter((item) => item.permitZone === name && (district === "전체" || item.district === district)).length}</b></button>)}</div>
-      <div className="permit-filter-state"><span>현재 필터</span><strong>{district === "전체" ? "서울 전체 자치구" : district}</strong><i>×</i><strong>{zone === "전체" ? "전체 허가구역" : zone}</strong></div>
+      <div className="permit-filter-state"><span>현재 필터</span><strong>{date === "all" ? "전체 기간" : date}</strong><i>·</i><strong>{district === "전체" ? "서울 전체 자치구" : district}</strong><i>·</i><strong>{zone === "전체" ? "전체 허가구역" : zone}</strong></div>
       <div className="deal-list permit-preview-list"><div className="deal-list-head"><span>지역</span><span>단지 / 허가구역</span><span>면적</span><span>거래금액</span><span>계약일</span></div>{visible.length ? visible.slice(0, limit).map((item) => <DealRow item={item} onSelect={onSelect} key={item.id} />) : <Empty>선택한 자치구와 허가구역에 거래가 없습니다.</Empty>}</div>
       {limit < visible.length && <button className="morebtn" type="button" onClick={() => setLimit((value) => value + 8)}>+{visible.length - limit}건 더 보기 ↓</button>}
     </section>

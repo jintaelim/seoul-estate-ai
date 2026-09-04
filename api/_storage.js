@@ -3,6 +3,48 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const storageConfigured = Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 
+// Vercel 함수가 매 요청마다 국토부 25개 구를 다시 조회하지 않도록
+// Supabase에 저장된 원장을 읽습니다. PostgREST 기본 최대 행 수(1,000)를
+// 고려해 페이지 단위로 가져옵니다.
+export async function readTransactions() {
+  if (!storageConfigured) return null;
+  const rows = [];
+  const pageSize = 1000;
+  for (let offset = 0; offset < 20000; offset += pageSize) {
+    const url = new URL(`${SUPABASE_URL}/rest/v1/transactions`);
+    url.searchParams.set("select", "id,district,dong,complex,area,floor,price,deal_date,dealing_type,permit_zone");
+    url.searchParams.set("order", "deal_date.desc,id.desc");
+    url.searchParams.set("limit", String(pageSize));
+    url.searchParams.set("offset", String(offset));
+    const response = await fetch(url, {
+      headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` },
+    });
+    if (!response.ok) throw new Error(`Supabase transactions ${response.status}: ${await response.text()}`);
+    const page = await response.json();
+    rows.push(...page.map((row) => ({
+      id: row.id,
+      district: row.district,
+      dong: row.dong || "",
+      aptDong: "",
+      complex: row.complex,
+      area: Number(row.area) || 0,
+      floor: Number(row.floor) || 0,
+      price: Number(row.price) || 0,
+      builtYear: 0,
+      dealDate: row.deal_date,
+      dealingGbn: row.dealing_type || "",
+      permitZone: row.permit_zone || null,
+      address: `서울 ${row.district} ${row.dong || ""}`.trim(),
+      households: 0,
+      permitDays: null,
+      recentCount: 0,
+      previousHigh: 0,
+    })));
+    if (page.length < pageSize) break;
+  }
+  return rows.length ? rows : null;
+}
+
 export async function persistTransactions(items) {
   if (!storageConfigured || !items.length) return { persisted: false, reason: "storage-not-configured" };
   const apartments = [...new Map(items.map((item) => [

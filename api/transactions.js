@@ -1,6 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { fetchMolit, runInBatches } from "../molit-fetch.js";
-import { persistTransactions, storageConfigured } from "./_storage.js";
+import { persistTransactions, readTransactions, storageConfigured } from "./_storage.js";
 
 const SERVICE_KEY = process.env.MOLIT_API_KEY;
 
@@ -156,6 +156,30 @@ export default async function handler(req, res) {
       error: "MOLIT_API_KEY가 설정되지 않았습니다.",
       fallback: true,
     });
+  }
+
+  // 일반 화면 요청은 저장된 원장을 즉시 반환합니다. 국토부 원본 재수집은
+  // Cron 또는 ?refresh=1 요청에서만 실행해 화면 로딩을 수십 초 기다리지 않게 합니다.
+  const refreshRequested = req.query?.refresh === "1" || req.headers["x-cron-ingest"] === "1";
+  if (!refreshRequested && storageConfigured) {
+    try {
+      const stored = await readTransactions();
+      if (stored?.length) {
+        let cached = computePreviousHighs(stored);
+        cached = computeRecentCounts(cached);
+        cached.sort((a, b) => b.dealDate.localeCompare(a.dealDate));
+        return res.json({
+          data: cached,
+          source: "supabase",
+          fetchedAt: new Date().toISOString(),
+          latestDealDate: cached[0]?.dealDate ?? null,
+          count: cached.length,
+          persistence: { persisted: false, reason: "supabase-cache" },
+        });
+      }
+    } catch {
+      // 저장소가 일시적으로 unavailable하면 아래 국토부 원본 수집으로 폴백합니다.
+    }
   }
 
   const yearMonths = [getYearMonth(0), getYearMonth(1), getYearMonth(2)];

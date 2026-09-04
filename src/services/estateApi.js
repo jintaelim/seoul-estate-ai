@@ -42,3 +42,10 @@ export async function fetchRentTransactions({ district, dong, complex, months = 
   if (!response.ok) throw new Error(payload.error || `전월세 API ${response.status}`);
   return payload;
 }
+
+export async function fetchApartmentBasic(query, signal) {
+  const response = await fetch(`/api/apartment-basic?query=${encodeURIComponent(query)}`, { signal });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `단지 기본정보 API ${response.status}`);
+  return payload;
+}

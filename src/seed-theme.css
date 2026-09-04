@@ -327,6 +327,26 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
 /* Keep history rows aligned with the full card width on wide screens. */
 .deal-list-head, .di { width: 100%; box-sizing: border-box; }
 
+/* Framna-inspired rhythm: typography leads, data surfaces enter on scroll,
+   and cobalt is reserved for the active signal. */
+.home-page > *, .route-page > * { animation: scene-in 520ms var(--ease-out) both; }
+.home-page > :nth-child(2), .route-page > :nth-child(2) { animation-delay: 70ms; }
+.home-page > :nth-child(3), .route-page > :nth-child(3) { animation-delay: 140ms; }
+@keyframes scene-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@supports (animation-timeline: view()) {
+  .market-primary > .card, .market-rail > .card, .two > .card, .loan-calculator { animation: scene-reveal linear both; animation-timeline: view(); animation-range: entry 0% cover 24%; }
+  @keyframes scene-reveal { from { opacity: .35; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+}
+.hero-title { text-wrap: balance; }
+.hero-title em { text-decoration: underline; text-decoration-thickness: .045em; text-underline-offset: .08em; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.section-data-bar, .permit-filter-state { transition: background-color 180ms ease, color 180ms ease; }
+.section-data-bar:hover, .permit-filter-state:hover { background: var(--seed-color-bg-brand-weak); }
+.detail-chart circle, .detail-chart-rent-line { transition: opacity 180ms ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page > *, .route-page > *, .market-primary > .card, .market-rail > .card, .two > .card, .loan-calculator { animation: none; }
+}
+
 .loan-calculator { margin-top: 0; }
 .loan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding: 18px; background: var(--seed-color-bg-neutral-weak); border-radius: var(--seed-radius-r4); }
 .loan-result { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 1px; margin-top: 18px; overflow: hidden; border-radius: var(--seed-radius-r4); background: var(--div); }

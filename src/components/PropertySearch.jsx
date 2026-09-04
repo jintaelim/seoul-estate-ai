@@ -48,7 +48,7 @@ export default function PropertySearch({ transactions, source, initialBudget, on
 
   return (
     <section className="card property-search-card" id="propertySearch">
-      <SectionHeader eyebrow="APARTMENT FINDER" title="조건으로 단지 좁히기" description="단지별 최근 실거래를 가격·면적·준공연도로 비교합니다." action={<span className={`source-pill ${source}`}><i />{source === "molit" ? "국토부 실데이터" : source === "cache" ? "1시간 캐시" : "샘플 데이터"}</span>} />
+      <SectionHeader eyebrow="APARTMENT FINDER" title="조건으로 단지 좁히기" description="단지별 최근 실거래를 가격·면적·준공연도로 비교합니다." action={<span className={`source-pill ${source}`}><i />{source === "molit" ? "국토부 실데이터" : source === "cache" ? "1시간 캐시" : source === "loading" ? "데이터 확인 중" : "데이터 연결 대기"}</span>} />
       <div className="react-search-grid">
         <SeedTextInput className="search-wide" label="단지명 · 구 · 동" type="search" placeholder="예: 반포, 성수동, 은평구" value={filters.keyword} onChange={update("keyword")} />
         <SeedSelect label="자치구" value={filters.district} onChange={updateValue("district")} options={districts} />

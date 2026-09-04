@@ -38,7 +38,7 @@ export default function App() {
 
   const status = <>
     {loading && <div className="data-loading" role="status"><ProgressCircle.Root size="24" tone="staticWhite"><ProgressCircle.Track /><ProgressCircle.Range /></ProgressCircle.Root>국토교통부 최신 데이터를 확인하고 있습니다.</div>}
-    {error && <Callout.Root className="data-callout" tone="warning"><Callout.Content><Callout.Title>저장된 거래 내역을 보여드리고 있어요</Callout.Title><Callout.Description>{error} 네트워크가 안정되면 최신 자료를 다시 확인할 수 있습니다.</Callout.Description></Callout.Content><Callout.Link onClick={retry}>다시 불러오기</Callout.Link></Callout.Root>}
+    {error && <Callout.Root className="data-callout" tone="warning"><Callout.Content><Callout.Title>{transactions.length ? "저장된 거래 내역을 보여드리고 있어요" : "최신 거래 내역을 불러오지 못했어요"}</Callout.Title><Callout.Description>{error} 잠시 후 다시 시도해 주세요.</Callout.Description></Callout.Content><Callout.Link onClick={retry}>다시 불러오기</Callout.Link></Callout.Root>}
   </>;
 
   return (

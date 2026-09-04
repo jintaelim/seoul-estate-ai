@@ -26,3 +26,10 @@ export async function fetchCandidates(months, signal) {
   if (payload.error) throw new Error(payload.error);
   return payload;
 }
+
+export async function fetchApartmentMeta(query, signal) {
+  const response = await fetch(`/api/apartment-meta?query=${encodeURIComponent(query)}`, { signal });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `단지 메타 API ${response.status}`);
+  return payload;
+}

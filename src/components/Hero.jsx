@@ -12,7 +12,6 @@ export default function Hero({ transactions, onBudgetSearch }) {
     <section className="hero" id="top">
       <div className="hero-top">
         <div>
-          <div className="hero-headline"><span /> SEOUL TRANSACTION RADAR</div>
           <h1 className="hero-title">서울 아파트,<br /><em>움직인 가격</em>부터 봅니다.</h1>
           <p className="hero-lead">실거래 원장과 토지거래허가 내역을 한 흐름으로 확인하고<br className="desktop-only" /> 내 예산에 맞는 다음 단지를 빠르게 좁혀보세요.</p>
         </div>

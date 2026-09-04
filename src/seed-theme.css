@@ -274,11 +274,7 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
   border: 1px solid var(--div);
   box-shadow: var(--sh2);
 }
-.hero::before {
-  background-image: linear-gradient(rgba(17,19,24,.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(17,19,24,.055) 1px, transparent 1px);
-}
-.hero::after { color: rgba(17,19,24,.055); }
+.hero::before, .hero::after { display: none; }
 .hero-headline { color: var(--t2); }
 .hero-headline span { background: var(--accent); box-shadow: 0 0 0 5px rgba(54,56,222,.12); }
 .hero-title { color: var(--t1); }

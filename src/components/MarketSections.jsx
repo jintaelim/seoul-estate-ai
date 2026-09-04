@@ -56,7 +56,7 @@ export function History({ transactions, onSelect }) {
 export function PermitPreview({ transactions, onSelect }) {
   const permits = transactions.filter((item) => item.permitZone);
   const zones = [...new Set(permits.map((item) => item.permitZone))];
-  const districts = ["전체", ...new Set(permits.map((item) => item.district).filter(Boolean).sort())];
+  const districts = ["전체", ...new Set(transactions.map((item) => item.district).filter(Boolean).sort())];
   const [zone, setZone] = useState("전체");
   const [district, setDistrict] = useState("전체");
   const [limit, setLimit] = useState(8);

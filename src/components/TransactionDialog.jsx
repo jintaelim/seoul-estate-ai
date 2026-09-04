@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@seed-design/react";
 import { formatPrice, isRecord, pricePerPyeong, pyeong } from "../utils";
-import { fetchRentTransactions } from "../services/estateApi";
+import { fetchApartmentMeta, fetchRentTransactions } from "../services/estateApi";
 
 const sameUnit = (candidate, item) => candidate.district === item.district
   && candidate.complex === item.complex
@@ -63,11 +63,21 @@ export default function TransactionDialog({ item, transactions, onClose }) {
   const ref = useRef(null);
   const [rentDeals, setRentDeals] = useState([]);
   const [rentError, setRentError] = useState("");
+  const [placeMeta, setPlaceMeta] = useState(null);
 
   useEffect(() => {
     const dialog = ref.current;
     if (item && !dialog.open) dialog.showModal();
     if (!item && dialog.open) dialog.close();
+  }, [item]);
+
+  useEffect(() => {
+    if (!item) { setPlaceMeta(null); return undefined; }
+    const controller = new AbortController();
+    fetchApartmentMeta(`${item.district} ${item.dong} ${item.complex}`, controller.signal)
+      .then(setPlaceMeta)
+      .catch((error) => { if (error.name !== "AbortError") setPlaceMeta(null); });
+    return () => controller.abort();
   }, [item]);
 
   useEffect(() => {
@@ -128,7 +138,7 @@ export default function TransactionDialog({ item, transactions, onClose }) {
             <section className="detail-section detail-facts-section">
               <div className="detail-section-head"><div><span>BUILDING FILE</span><h3>단지·거래 정보</h3></div></div>
               <dl className="detail-facts">
-                <div><dt>준공연도</dt><dd>{item.builtYear ? `${item.builtYear}년` : "정보 없음"}</dd></div><div><dt>거래 방식</dt><dd>{item.dealingGbn || "정보 없음"}</dd></div><div><dt>동</dt><dd>{item.aptDong || "미기재"}</dd></div><div><dt>단지 거래</dt><dd>{detail.complexCount.toLocaleString("ko-KR")}건</dd></div><div><dt>확인 면적</dt><dd>{detail.areaTypes.length ? detail.areaTypes.map((area) => `${area}㎡`).join(" · ") : "정보 없음"}</dd></div><div><dt>동일면적 범위</dt><dd>{formatPrice(detail.low)} – {formatPrice(detail.high)}</dd></div>
+                <div><dt>준공연도</dt><dd>{item.builtYear ? `${item.builtYear}년` : "정보 없음"}</dd></div><div><dt>거래 방식</dt><dd>{item.dealingGbn || "정보 없음"}</dd></div><div><dt>동</dt><dd>{item.aptDong || "미기재"}</dd></div><div><dt>단지 거래</dt><dd>{detail.complexCount.toLocaleString("ko-KR")}건</dd></div><div><dt>확인 면적</dt><dd>{detail.areaTypes.length ? detail.areaTypes.map((area) => `${area}㎡`).join(" · ") : "정보 없음"}</dd></div><div><dt>동일면적 범위</dt><dd>{formatPrice(detail.low)} – {formatPrice(detail.high)}</dd></div><div><dt>가까운 역</dt><dd>{placeMeta?.station ? `${placeMeta.station.name} · 도보 약 ${placeMeta.station.estimatedWalkMinutes}분` : "정보 없음"}</dd></div>
               </dl>
             </section>
           </div>

@@ -33,3 +33,12 @@ export async function fetchApartmentMeta(query, signal) {
   if (!response.ok) throw new Error(payload.error || `단지 메타 API ${response.status}`);
   return payload;
 }
+
+export async function fetchRentTransactions({ district, dong, complex, months = 24 }, signal) {
+  const params = new URLSearchParams({ district, complex, months: String(months) });
+  if (dong) params.set("dong", dong);
+  const response = await fetch(`/api/rent-transactions?${params}`, { signal });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `전월세 API ${response.status}`);
+  return payload;
+}

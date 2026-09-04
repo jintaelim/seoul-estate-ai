@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@seed-design/react";
 import { formatPrice, isRecord, pricePerPyeong, pyeong } from "../utils";
+import { fetchRentTransactions } from "../services/estateApi";
 
 const sameUnit = (candidate, item) => candidate.district === item.district
   && candidate.complex === item.complex
@@ -9,8 +10,8 @@ const sameUnit = (candidate, item) => candidate.district === item.district
 const changeRate = (current, previous) => previous ? ((current / previous) - 1) * 100 : 0;
 const signedRate = (rate) => `${rate > 0 ? "+" : ""}${rate.toFixed(1)}%`;
 
-function TrendChart({ items }) {
-  if (items.length < 2) {
+function TrendChart({ items, rentItems = [] }) {
+  if (items.length < 2 && rentItems.length < 2) {
     return <div className="detail-chart-empty"><span>—</span><p>동일 면적 거래가 더 쌓이면 가격 추이를 보여드립니다.</p></div>;
   }
 
@@ -18,7 +19,7 @@ function TrendChart({ items }) {
   const height = 190;
   const padX = 10;
   const padY = 18;
-  const prices = items.map((entry) => entry.price);
+  const prices = [...items.map((entry) => entry.price), ...rentItems.map((entry) => entry.deposit).filter(Boolean)];
   const min = Math.min(...prices);
   const max = Math.max(...prices);
   const range = Math.max(max - min, 1);
@@ -29,6 +30,7 @@ function TrendChart({ items }) {
   }));
   const line = points.map((point) => `${point.x},${point.y}`).join(" ");
   const area = `${padX},${height - padY} ${line} ${width - padX},${height - padY}`;
+  const rentPoints = rentItems.map((entry, index) => ({ ...entry, x: padX + (index / Math.max(rentItems.length - 1, 1)) * (width - padX * 2), y: padY + ((max - entry.deposit) / range) * (height - padY * 2) }));
 
   return (
     <div className="detail-chart-wrap">
@@ -40,9 +42,12 @@ function TrendChart({ items }) {
         <line className="detail-chart-guide" x1="10" y1="172" x2="630" y2="172" />
         <polygon points={area} fill="url(#transactionArea)" />
         <polyline className="detail-chart-line" points={line} />
+        {rentPoints.length > 1 && <polyline className="detail-chart-rent-line" points={rentPoints.map((point) => `${point.x},${point.y}`).join(" ")} />}
         {points.map((point, index) => <circle className={index === points.length - 1 ? "latest" : ""} cx={point.x} cy={point.y} r={index === points.length - 1 ? 5 : 3} key={point.id} />)}
+        {rentPoints.map((point, index) => <circle className="rent-point" cx={point.x} cy={point.y} r={index === rentPoints.length - 1 ? 5 : 3} key={point.id} />)}
       </svg>
-      <div className="detail-chart-dates"><span>{items[0].dealDate}</span><span>{items.at(-1).dealDate}</span></div>
+      <div className="detail-chart-dates"><span>{(items[0] ?? rentItems[0]).dealDate}</span><span>{(items.at(-1) ?? rentItems.at(-1)).dealDate}</span></div>
+      <div className="detail-chart-legend"><span className="sale">● 매매 실거래</span><span className="rent">● 전세 보증금</span></div>
     </div>
   );
 }
@@ -53,11 +58,23 @@ function Metric({ label, value, note, tone = "" }) {
 
 export default function TransactionDialog({ item, transactions, onClose }) {
   const ref = useRef(null);
+  const [rentDeals, setRentDeals] = useState([]);
+  const [rentError, setRentError] = useState("");
 
   useEffect(() => {
     const dialog = ref.current;
     if (item && !dialog.open) dialog.showModal();
     if (!item && dialog.open) dialog.close();
+  }, [item]);
+
+  useEffect(() => {
+    if (!item) { setRentDeals([]); return undefined; }
+    const controller = new AbortController();
+    setRentError("");
+    fetchRentTransactions({ district: item.district, dong: item.dong, complex: item.complex, months: 24 }, controller.signal)
+      .then((payload) => setRentDeals((payload.data ?? []).filter((entry) => Math.abs(entry.area - item.area) < 1).slice(0, 18).reverse()))
+      .catch((error) => { if (error.name !== "AbortError") { setRentDeals([]); setRentError(error.message); } });
+    return () => controller.abort();
   }, [item]);
 
   const detail = useMemo(() => {
@@ -104,7 +121,7 @@ export default function TransactionDialog({ item, transactions, onClose }) {
           </section>
 
           <div className="detail-content-grid">
-            <section className="detail-section detail-trend-section"><div className="detail-section-head"><div><span>PRICE TRACE</span><h3>동일 면적 가격 추이</h3></div><p>최근 {detail.chartDeals.length}건</p></div><TrendChart items={detail.chartDeals} /></section>
+            <section className="detail-section detail-trend-section"><div className="detail-section-head"><div><span>PRICE TRACE</span><h3>매매·전세 가격 추이</h3></div><p>매매 {detail.chartDeals.length}건 · 전세 {rentDeals.length}건</p></div><TrendChart items={detail.chartDeals} rentItems={rentDeals} />{rentError && <p className="detail-rent-note">전세 데이터는 API 키 또는 조회 조건을 확인해 주세요.</p>}</section>
             <section className="detail-section detail-facts-section">
               <div className="detail-section-head"><div><span>BUILDING FILE</span><h3>단지·거래 정보</h3></div></div>
               <dl className="detail-facts">

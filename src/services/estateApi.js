@@ -11,7 +11,7 @@ export function readTransactionCache() {
 }
 
 export async function fetchTransactions() {
-  const response = await fetch("/api/transactions");
+  const response = await fetch("/api/transactions", { cache: "no-store" });
   if (!response.ok) throw new Error(`실거래 API ${response.status}`);
   const payload = await response.json();
   if (!payload.data?.length) throw new Error(payload.error || "실거래 데이터가 비어 있습니다.");

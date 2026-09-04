@@ -147,6 +147,9 @@ function computeRecentCounts(items) {
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
+  // 거래 원장은 요청 시점의 국토부 공개 데이터를 기준으로 하므로
+  // Vercel/CDN이 이전 응답을 재사용하지 않도록 명시합니다.
+  res.setHeader("Cache-Control", "no-store, max-age=0");
 
   if (!SERVICE_KEY) {
     return res.status(503).json({
@@ -182,6 +185,7 @@ export default async function handler(req, res) {
       data: raw,
       source: "molit",
       fetchedAt: new Date().toISOString(),
+      latestDealDate: raw[0]?.dealDate ?? null,
       count: raw.length,
       persistence,
     });

@@ -9,7 +9,15 @@ export async function persistTransactions(items) {
     `${item.district}|${item.complex}`,
     { id: `${item.district}-${item.complex}`.slice(0, 180), name: item.complex, district: item.district, dong: item.dong, address: item.address, approval_date: item.builtYear ? `${item.builtYear}-01-01` : null, source: "molit" },
   ])).values()];
-  const transactions = items.map((item) => ({ id: item.id, apartment_id: `${item.district}-${item.complex}`.slice(0, 180), district: item.district, dong: item.dong, complex: item.complex, area: item.area, floor: item.floor, price: item.price, deal_date: item.dealDate, dealing_type: item.dealingGbn || null, permit_zone: item.permitZone || null, source: "molit" }));
+  // 국토부 원본은 같은 날짜·동·층·면적에 여러 건이 있을 수 있어
+  // 화면용 id만으로 upsert하면 한 요청 안에서 ON CONFLICT가 중복됩니다.
+  // 가격까지 포함한 안정적인 키로 만들고, 완전히 같은 키는 마지막 값 하나만 저장합니다.
+  const transactionMap = new Map();
+  for (const item of items) {
+    const id = `${item.id}-${item.price}`.slice(0, 240);
+    transactionMap.set(id, { id, apartment_id: `${item.district}-${item.complex}`.slice(0, 180), district: item.district, dong: item.dong, complex: item.complex, area: item.area, floor: item.floor, price: item.price, deal_date: item.dealDate, dealing_type: item.dealingGbn || null, permit_zone: item.permitZone || null, source: "molit" });
+  }
+  const transactions = [...transactionMap.values()];
   await supabaseUpsert("apartments", apartments, "id");
   await supabaseUpsert("transactions", transactions, "id");
   return { persisted: true, apartments: apartments.length, transactions: transactions.length };

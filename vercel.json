@@ -1,4 +1,5 @@
 {
+  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
@@ -13,5 +14,5 @@
     { "source": "/records", "destination": "/index.html" },
     { "source": "/permits", "destination": "/index.html" },
     { "source": "/watchlist", "destination": "/index.html" }
-  }
+  ]
 }

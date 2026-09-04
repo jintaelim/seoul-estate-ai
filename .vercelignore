@@ -1,3 +1,6 @@
-server.js
 node_modules
+dist
+.git
+.DS_Store
 .env
+.claude

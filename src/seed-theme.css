@@ -162,10 +162,21 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
 .permit-date-strip button { display: grid; flex: 0 0 64px; min-height: 78px; place-content: center; justify-items: center; gap: 2px; border: 1px solid var(--seed-color-stroke-neutral-muted); border-radius: var(--seed-radius-r3); background: var(--seed-color-bg-layer-default); color: var(--seed-color-fg-neutral-subtle); transition: var(--seed-feedback-scale-transition), background-color var(--seed-duration-color-transition), border-color var(--seed-duration-color-transition); }
 .permit-date-strip button:hover { border-color: var(--seed-color-stroke-brand-weak); background: var(--seed-color-bg-brand-weak); }
 .permit-date-strip button.on { border-color: var(--seed-color-stroke-brand-solid); background: var(--seed-color-bg-brand-weak); color: var(--seed-color-fg-brand); box-shadow: inset 0 0 0 1px var(--seed-color-stroke-brand-solid); }
+.permit-date-strip button.empty-date { opacity: .62; }
 .permit-date-strip button small { font-size: 10px; font-weight: 700; }
 .permit-date-strip button strong { font: 850 24px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .permit-date-strip button i { font-size: 9px; font-style: normal; }
+.permit-date-strip button .permit-date-count { color: inherit; font: 750 9px/1 var(--font); }
+.permit-date-strip button > em { align-self: end; width: 18px; min-height: 4px; border-radius: var(--seed-radius-full); background: var(--seed-color-bg-brand-solid); font-style: normal; transition: height 300ms var(--seed-timing-function-easing); }
 .permit-date-strip button.all-date strong { font-size: 19px; }
+.permit-district-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 12px 0 14px; scrollbar-width: none; }
+.permit-district-tabs::-webkit-scrollbar { display: none; }
+.permit-district-tabs button { flex: 0 0 auto; min-height: 38px; padding-inline: 14px; border-radius: var(--seed-radius-full); background: var(--seed-color-bg-neutral-weak); color: var(--seed-color-fg-neutral); font-size: 12px; font-weight: 750; transition: var(--seed-feedback-scale-transition), background-color var(--seed-duration-color-transition), color var(--seed-duration-color-transition); }
+.permit-district-tabs button:hover { background: var(--seed-color-bg-brand-weak); color: var(--seed-color-fg-brand); }
+.permit-district-tabs button.on { background: var(--seed-color-bg-brand-solid); color: var(--seed-color-palette-static-white); }
+.permit-district-tabs button:active { scale: .96; }
+.permit-district-tabs button b { margin-left: 4px; opacity: .66; font: 750 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.permit-district-tabs button.on b { opacity: .85; }
 
 .listing-table-row, .di, .rec-item, .candidate-row, .dcell { transition: var(--seed-feedback-scale-transition), background-color var(--seed-duration-color-transition); }
 .listing-table-row:hover, .di:hover, .rec-item:hover, .candidate-row:hover { background: var(--seed-color-bg-layer-default-pressed); }

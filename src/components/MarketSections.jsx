@@ -203,8 +203,9 @@ export function History({ transactions, onSelect }) {
 export function PermitPreview({ transactions, onSelect }) {
   const permits = transactions.filter((item) => item.permitZone);
   const zones = [...new Set(permits.map((item) => item.permitZone))];
-  const districts = ["전체", ...new Set(transactions.map((item) => item.district).filter(Boolean).sort())];
-  const permitDates = [...new Set(permits.map((item) => item.dealDate))].sort().reverse().slice(0, 14);
+  const latestPermitDate = latestDate(permits);
+  const permitDateAnchor = latestDate(transactions) || latestPermitDate || seoulDateKey();
+  const permitDates = Array.from({ length: 14 }, (_, index) => shiftDateKey(permitDateAnchor, -index));
   const [zone, setZone] = useState("전체");
   const [district, setDistrict] = useState("전체");
   const [date, setDate] = useState("all");
@@ -213,6 +214,9 @@ export function PermitPreview({ transactions, onSelect }) {
   const selectDistrict = (value) => { setDistrict(value); setLimit(8); };
   const selectZone = (value) => { setZone(value); setLimit(8); };
   const selectDate = (value) => { setDate(value); setLimit(8); };
+  const dateCount = (value) => permits.filter((item) => item.dealDate === value && (zone === "전체" || item.permitZone === zone) && (district === "전체" || item.district === district)).length;
+  const zoneCount = (value) => permits.filter((item) => (value === "전체" || item.permitZone === value) && (district === "전체" || item.district === district) && (date === "all" || item.dealDate === date)).length;
+  const maxDateCount = Math.max(1, ...permitDates.map(dateCount));
   const dateLabel = (value) => {
     const parsed = new Date(`${value}T00:00:00Z`);
     return { month: parsed.getUTCMonth() + 1, day: parsed.getUTCDate(), weekday: new Intl.DateTimeFormat("ko-KR", { weekday: "short", timeZone: "UTC" }).format(parsed) };
@@ -222,15 +226,16 @@ export function PermitPreview({ transactions, onSelect }) {
       <SectionHeader
         eyebrow="LAND PERMIT LEDGER"
         title="토지거래허가구역 거래"
-        description="서울 자치구와 허가구역을 함께 선택해 거래를 좁혀봅니다."
-        action={<div className="permit-header-actions"><SeedSelect className="permit-district-select" label="자치구 선택" value={district} onChange={selectDistrict} options={districts} /><span className="permit-count"><b>{visible.length.toLocaleString("ko-KR")}</b>건 <small>/ {zones.length}개 구역</small></span></div>}
+        description={`서울 전체·자치구와 날짜를 먼저 고르고 허가구역 거래를 확인합니다.${latestPermitDate ? ` 최신 매핑 거래일 ${latestPermitDate}` : ""}`}
+        action={<div className="permit-header-actions"><span className="permit-count"><b>{visible.length.toLocaleString("ko-KR")}</b>건 <small>/ {zones.length}개 구역</small></span></div>}
       />
       <div className="permit-date-strip" aria-label="토지허가거래 기준일 선택">
-        <button className={date === "all" ? "on all-date" : "all-date"} type="button" onClick={() => selectDate("all")}><small>기간</small><strong>전체</strong></button>
-        {permitDates.map((value) => { const label = dateLabel(value); return <button className={date === value ? "on" : ""} type="button" key={value} onClick={() => selectDate(value)}><small>{label.weekday}</small><strong>{label.day}</strong><i>{label.month}월</i></button>; })}
+        <button className={date === "all" ? "on all-date" : "all-date"} type="button" onClick={() => selectDate("all")}><small>기간</small><strong>전체</strong><span className="permit-date-count">{permits.filter((item) => (zone === "전체" || item.permitZone === zone) && (district === "전체" || item.district === district)).length}건</span></button>
+        {permitDates.map((value) => { const label = dateLabel(value); const count = dateCount(value); return <button className={`${date === value ? "on" : ""} ${count ? "has-data" : "empty-date"}`} type="button" key={value} onClick={() => selectDate(value)} title={`${value} · ${count}건`}><small>{label.weekday}</small><strong>{label.day}</strong><i>{label.month}월</i><span className="permit-date-count">{count}건</span><em style={{ height: `${Math.max(4, (count / maxDateCount) * 22)}px` }} /></button>; })}
       </div>
-      <div className="permit-notice"><span className="notice-mark">!</span><p><strong>허가 여부가 아닌 구역 내 실거래입니다.</strong><small>실제 허가 상태와 이용 목적은 관할 구청 자료를 함께 확인하세요.</small></p></div>
-      <div className="permit-zone-tabs"><button className={zone === "전체" ? "on" : ""} type="button" onClick={() => selectZone("전체")}>전체 <b>{permits.filter((item) => district === "전체" || item.district === district).length}</b></button>{zones.map((name) => <button className={zone === name ? "on" : ""} type="button" key={name} onClick={() => selectZone(name)}>{name} <b>{permits.filter((item) => item.permitZone === name && (district === "전체" || item.district === district)).length}</b></button>)}</div>
+      <div className="permit-district-tabs" aria-label="서울 자치구 선택"><button className={district === "전체" ? "on" : ""} type="button" onClick={() => selectDistrict("전체")}>서울 전체 <b>{permits.filter((item) => zone === "전체" || item.permitZone === zone).length}</b></button>{SEOUL_DISTRICTS.map((name) => <button className={district === name ? "on" : ""} type="button" key={name} onClick={() => selectDistrict(name)}>{name} <b>{permits.filter((item) => item.district === name && (zone === "전체" || item.permitZone === zone)).length}</b></button>)}</div>
+      <div className="permit-notice"><span className="notice-mark">!</span><p><strong>허가 여부가 아닌 구역 내 실거래입니다.</strong><small>국토부 거래의 동·허가구역 매핑 기준이며, 실제 허가 상태는 관할 구청 자료를 확인하세요.</small></p></div>
+      <div className="permit-zone-tabs"><button className={zone === "전체" ? "on" : ""} type="button" onClick={() => selectZone("전체")}>전체 <b>{zoneCount("전체")}</b></button>{zones.map((name) => <button className={zone === name ? "on" : ""} type="button" key={name} onClick={() => selectZone(name)}>{name} <b>{zoneCount(name)}</b></button>)}</div>
       <div className="permit-filter-state"><span>현재 필터</span><strong>{date === "all" ? "전체 기간" : date}</strong><i>·</i><strong>{district === "전체" ? "서울 전체 자치구" : district}</strong><i>·</i><strong>{zone === "전체" ? "전체 허가구역" : zone}</strong></div>
       <div className="deal-list permit-preview-list"><div className="deal-list-head"><span>지역</span><span>단지 / 허가구역</span><span>면적</span><span>거래금액</span><span>계약일</span></div>{visible.length ? visible.slice(0, limit).map((item) => <DealRow item={item} onSelect={onSelect} key={item.id} />) : <Empty>선택한 자치구와 허가구역에 거래가 없습니다.</Empty>}</div>
       {limit < visible.length && <button className="morebtn" type="button" onClick={() => setLimit((value) => value + 8)}>+{visible.length - limit}건 더 보기 ↓</button>}

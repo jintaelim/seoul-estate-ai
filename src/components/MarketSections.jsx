@@ -49,7 +49,7 @@ function periodWindow(period, latest) {
   const previousMonthStart = formatDateKey(previousMonth);
   const previousMonthEnd = formatDateKey(new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 0)));
 
-  if (period === "latest") return { start: latest || today, end: latest || today };
+  if (period === "latest") return { start: latest || "", end: latest || "" };
   if (period === "week") return { start: monday, end: today };
   if (period === "month") return { start: monthStart, end: today };
   if (period === "previousMonth") return { start: previousMonthStart, end: previousMonthEnd };

@@ -125,6 +125,8 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
 [data-selected] > .seed-select-check { opacity: 1; }
 .seed-segmented { min-width: 190px; }
 .seed-segmented label { cursor: pointer; }
+.transaction-period-control { min-width: 430px; }
+.transaction-period-control .seed-segmented-control__item { min-width: 0; padding-inline: 12px; white-space: nowrap; }
 .candidate-period-select { min-width: 150px; }
 .candidate-period-select [data-part="label"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 .permit-header-actions { display: flex; align-items: end; gap: var(--seed-dimension-x3); }
@@ -196,6 +198,8 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
   .react-search-grid { grid-template-columns: 1fr; }
   .search-wide { grid-column: auto; }
   .seed-segmented { width: 100%; min-width: 0; }
+  .transaction-period-control { min-width: 0; overflow-x: auto; }
+  .transaction-period-control .seed-segmented-control__item { min-width: 62px; padding-inline: 6px; }
   .permit-header-actions { align-items: stretch; gap: 10px; }
   .permit-district-select { flex: 1; width: auto; }
   .permit-count b { font-size: 22px; }

@@ -5,18 +5,83 @@ import { formatPrice, isRecord, latestDate, pricePerPyeong, recordRate } from ".
 import { DealRow, Empty, SectionHeader } from "./Common";
 import { SeedSelect } from "./SeedFormControls";
 
+const TRANSACTION_PERIODS = [
+  ["latest", "최신일"],
+  ["week", "이번주"],
+  ["month", "이번달"],
+  ["previousMonth", "지난달"],
+  ["all", "누적"],
+];
+
+function seoulDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function parseDateKey(value) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function formatDateKey(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function shiftDateKey(value, amount) {
+  const date = parseDateKey(value);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return formatDateKey(date);
+}
+
+function periodWindow(period, latest) {
+  const today = seoulDateKey();
+  const anchor = parseDateKey(today);
+  const dayOfWeek = anchor.getUTCDay();
+  const monday = shiftDateKey(today, -(dayOfWeek + 6) % 7);
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const previousMonth = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() - 1, 1));
+  const previousMonthStart = formatDateKey(previousMonth);
+  const previousMonthEnd = formatDateKey(new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), 0)));
+
+  if (period === "latest") return { start: latest || today, end: latest || today };
+  if (period === "week") return { start: monday, end: today };
+  if (period === "month") return { start: monthStart, end: today };
+  if (period === "previousMonth") return { start: previousMonthStart, end: previousMonthEnd };
+  return { start: "", end: "" };
+}
+
 export function NewClosings({ transactions, onSelect }) {
-  const [tab, setTab] = useState("latest");
+  const [period, setPeriod] = useState("week");
   const [district, setDistrict] = useState("전체");
   const dates = [...new Set(transactions.map((item) => item.dealDate))].sort().reverse();
-  const base = tab === "latest" ? transactions.filter((item) => item.dealDate === dates[0]) : tab === "previous" ? transactions.filter((item) => item.dealDate === dates[1]) : transactions;
+  const window = periodWindow(period, dates[0]);
+  const base = period === "all"
+    ? transactions
+    : transactions.filter((item) => item.dealDate >= window.start && item.dealDate <= window.end);
   const districts = ["전체", ...new Set(base.map((item) => item.district))];
-  const visible = (district === "전체" ? base : base.filter((item) => item.district === district)).sort((a, b) => pricePerPyeong(b) - pricePerPyeong(a));
+  const visible = (district === "전체" ? base : base.filter((item) => item.district === district)).slice().sort((a, b) => pricePerPyeong(b) - pricePerPyeong(a));
   const recordCount = visible.filter(isRecord).length;
+  const periodLabel = TRANSACTION_PERIODS.find(([key]) => key === period)?.[1] ?? "기간";
+  const rangeLabel = period === "all"
+    ? `${dates.at(-1) ?? "-"}~${dates[0] ?? "-"}`
+    : window.start === window.end
+      ? window.start || "-"
+      : `${window.start}~${window.end}`;
   return (
     <section className="card" id="closings">
-      <SectionHeader eyebrow="LATEST CONTRACTS" title="최신 계약일 실거래" description={`${dates[0] ?? "-"} 계약일 기준 · 평당가 높은 순`} action={<SegmentedControl.Root className="seed-segmented" size="medium" value={tab} onValueChange={(value) => { setTab(value); setDistrict("전체"); }}><SegmentedControl.Indicator />{[["latest", "최신일"], ["previous", "이전일"], ["all", "누적"]].map(([key, label]) => <SegmentedControl.Item value={key} key={key}><SegmentedControl.ItemHiddenInput />{label}</SegmentedControl.Item>)}</SegmentedControl.Root>} />
-      <div className="section-data-bar"><span><b>{visible.length.toLocaleString("ko-KR")}</b>건 조회</span><span>신고가 <b className="red-text">{recordCount}</b>건</span><span>최고 거래가 <b>{visible.length ? formatPrice(Math.max(...visible.map((item) => item.price))) : "-"}</b></span></div>
+      <SectionHeader
+        eyebrow="LATEST CONTRACTS"
+        title={period === "latest" ? "최신 계약일 실거래" : `${periodLabel} 실거래`}
+        description={`${rangeLabel} 계약일 기준 · ${periodLabel} · 평당가 높은 순`}
+        action={<SegmentedControl.Root className="seed-segmented transaction-period-control" size="medium" value={period} onValueChange={(value) => { setPeriod(value); setDistrict("전체"); }}><SegmentedControl.Indicator />{TRANSACTION_PERIODS.map(([key, label]) => <SegmentedControl.Item value={key} key={key}><SegmentedControl.ItemHiddenInput />{label}</SegmentedControl.Item>)}</SegmentedControl.Root>}
+      />
+      <div className="section-data-bar"><span><b>{visible.length.toLocaleString("ko-KR")}</b>건 조회</span><span>조회 기간 <b>{periodLabel}</b></span><span>신고가 <b className="red-text">{recordCount}</b>건</span><span>최고 거래가 <b>{visible.length ? formatPrice(Math.max(...visible.map((item) => item.price))) : "-"}</b></span></div>
       <div className="rpills">{districts.map((name) => <button className={`rpill ${district === name ? "on" : ""}`} type="button" key={name} onClick={() => setDistrict(name)}>{name}</button>)}</div>
       <div className="deal-list"><div className="deal-list-head"><span>지역</span><span>단지 / 위치</span><span>면적</span><span>거래금액</span><span>계약일</span></div>{visible.length ? visible.slice(0, 12).map((item) => <DealRow item={item} onSelect={onSelect} key={item.id} />) : <Empty>해당 기간에 집계된 거래가 없습니다.</Empty>}</div>
     </section>

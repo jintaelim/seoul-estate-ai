@@ -1,7 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 
 const navItems = [
-  ["/transactions", "오늘의 실거래"],
+  ["/transactions", "최신 실거래"],
   ["/search", "아파트 검색"],
   ["/records", "신고가"],
   ["/permits", "토지거래허가"],

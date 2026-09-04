@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 export default function QuickAccess({ transactions }) {
   const latest = latestDate(transactions);
   const items = [
-    { href: "/transactions", key: "LIVE", title: "오늘의 실거래", value: transactions.filter((item) => item.dealDate === latest).length, unit: "건", tone: "blue", icon: "↘" },
+    { href: "/transactions", key: "LATEST CONTRACT", title: "최신 계약일 실거래", value: transactions.filter((item) => item.dealDate === latest).length, unit: "건", tone: "blue", icon: "↘" },
     { href: "/search", key: "SEARCH", title: "아파트 조건 검색", value: new Set(transactions.map((item) => item.complex)).size, unit: "단지", tone: "ink", icon: "⌕" },
     { href: "/records", key: "NEW HIGH", title: "오늘의 신고가", value: transactions.filter(isRecord).length, unit: "건", tone: "red", icon: "↑" },
     { href: "/permits", key: "PERMIT", title: "토허구역 거래", value: transactions.filter((item) => item.permitZone).length, unit: "건", tone: "amber", icon: "허" },

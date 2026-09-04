@@ -296,6 +296,34 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
 .page-header-meta strong { color: var(--t1); }
 .page-header-meta small { color: var(--t3); }
 
+/* Title-led headers: let the page breathe instead of boxing the heading in. */
+.page-header {
+  min-height: auto;
+  padding: 22px 0 8px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.page-header::after { display: none; }
+
+/* Elevation replaces most decorative borders on content surfaces. */
+.hero {
+  border: 0;
+  box-shadow: 0 18px 48px rgba(17,19,24,.10);
+}
+.card {
+  border: 0;
+  box-shadow: 0 10px 30px rgba(17,19,24,.07);
+}
+.quick-card {
+  border: 0;
+  box-shadow: 0 8px 24px rgba(17,19,24,.06);
+}
+.quick-card:hover {
+  border: 0;
+  box-shadow: 0 12px 30px rgba(17,19,24,.10);
+}
+
 /* Motion layer: short, interruptible feedback for frequent actions; restrained
    entrance motion for navigation and detail inspection. */
 :root {

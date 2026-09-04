@@ -127,6 +127,27 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
 .seed-segmented label { cursor: pointer; }
 .transaction-period-control { min-width: 430px; }
 .transaction-period-control .seed-segmented-control__item { min-width: 0; padding-inline: 12px; white-space: nowrap; }
+.volume-ranking-section .sheader { margin-bottom: 18px; }
+.volume-district-select { width: 170px; }
+.volume-district-select [data-part="label"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.volume-period-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.volume-period-label { flex: 0 0 auto; color: var(--seed-color-fg-neutral-muted); font-size: 11px; font-weight: 750; }
+.volume-period-control { min-width: 430px; flex: 1; }
+.volume-period-control .seed-segmented-control__item { min-width: 0; padding-inline: 12px; white-space: nowrap; }
+.volume-summary { margin-top: 0; }
+.volume-ranking-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; border-top: 1px solid var(--seed-color-stroke-neutral-subtle); }
+.volume-ranking-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 12px; align-items: center; min-width: 0; padding: 14px 4px; border-bottom: 1px solid var(--seed-color-stroke-neutral-subtle); text-align: left; transition: var(--seed-feedback-scale-transition), background-color var(--seed-duration-color-transition); }
+.volume-ranking-row:hover { background: var(--seed-color-bg-layer-default-pressed); }
+.volume-ranking-row:active { scale: .995; }
+.volume-rank-number { display: grid; place-items: center; width: 27px; height: 27px; border-radius: var(--seed-radius-r2); background: var(--seed-color-bg-brand-weak); color: var(--seed-color-fg-brand); font: 850 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.volume-rank-copy { display: grid; min-width: 0; gap: 2px; }
+.volume-rank-copy > strong { overflow: hidden; color: var(--seed-color-fg-neutral); font-size: 14px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.volume-rank-copy > small { overflow: hidden; color: var(--seed-color-fg-neutral-subtle); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.volume-rank-copy > i { display: block; width: 100%; height: 4px; margin-top: 6px; overflow: hidden; border-radius: var(--seed-radius-full); background: var(--seed-color-bg-neutral-weak); }
+.volume-rank-copy > i > em { display: block; height: 100%; border-radius: inherit; background: var(--seed-color-bg-brand-solid); transition: width 360ms var(--seed-timing-function-easing); }
+.volume-rank-count { display: flex; align-items: baseline; gap: 2px; color: var(--seed-color-fg-neutral); font: 850 20px/1 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+.volume-rank-count small { color: var(--seed-color-fg-neutral-muted); font: 750 11px/1 var(--font); }
+.volume-ranking-note { margin-top: 12px; color: var(--seed-color-fg-neutral-subtle); font-size: 11px; }
 .candidate-period-select { min-width: 150px; }
 .candidate-period-select [data-part="label"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
 .permit-header-actions { display: flex; align-items: end; gap: var(--seed-dimension-x3); }
@@ -200,9 +221,18 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
   .seed-segmented { width: 100%; min-width: 0; }
   .transaction-period-control { min-width: 0; overflow-x: auto; }
   .transaction-period-control .seed-segmented-control__item { min-width: 62px; padding-inline: 6px; }
+  .volume-period-row { align-items: stretch; flex-direction: column; gap: 7px; }
+  .volume-period-control { min-width: 0; overflow-x: auto; }
+  .volume-period-control .seed-segmented-control__item { min-width: 62px; padding-inline: 6px; }
   .permit-header-actions { align-items: stretch; gap: 10px; }
   .permit-district-select { flex: 1; width: auto; }
+  .volume-district-select { width: 180px; }
   .permit-count b { font-size: 22px; }
+}
+
+@media (max-width: 560px) {
+  .volume-ranking-list { grid-template-columns: 1fr; }
+  .volume-district-select { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

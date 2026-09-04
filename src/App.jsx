@@ -9,7 +9,7 @@ import PropertySearch from "./components/PropertySearch";
 import LoanCalculator from "./components/LoanCalculator";
 import CandidateWatchlist from "./components/CandidateWatchlist";
 import TransactionDialog from "./components/TransactionDialog";
-import { DistrictActivity, History, NewClosings, PermitPreview, RecordsAndSignals } from "./components/MarketSections";
+import { DistrictActivity, History, NewClosings, PermitPreview, RecordsAndSignals, TransactionVolumeRanking } from "./components/MarketSections";
 import { useTransactions } from "./hooks/useTransactions";
 
 function ScrollToTop() {
@@ -47,7 +47,7 @@ export default function App() {
       <Header />
       <Routes>
         <Route path="/" element={<main className="main home-page"><Hero transactions={transactions} onBudgetSearch={handleBudgetSearch} /><QuickAccess transactions={transactions} />{status}</main>} />
-        <Route path="/transactions" element={<main className="main route-page"><PageHeader eyebrow="TRANSACTION LEDGER" title="서울 실거래 원장" description="최신 계약일을 중심으로 이번주·이번달·지난달 거래를 비교합니다." meta={`${transactions.length.toLocaleString("ko-KR")}건`} />{status}<div className="market-workspace"><div className="market-primary"><NewClosings transactions={transactions} onSelect={setSelected} /><History transactions={transactions} onSelect={setSelected} /></div><aside className="market-rail"><DistrictActivity transactions={transactions} onDistrict={handleDistrict} /></aside></div></main>} />
+        <Route path="/transactions" element={<main className="main route-page"><PageHeader eyebrow="TRANSACTION LEDGER" title="서울 실거래 원장" description="최신 계약일을 중심으로 이번주·이번달·지난달 거래를 비교합니다." meta={`${transactions.length.toLocaleString("ko-KR")}건`} />{status}<div className="market-workspace"><div className="market-primary"><NewClosings transactions={transactions} onSelect={setSelected} /><TransactionVolumeRanking transactions={transactions} onSelect={setSelected} /><History transactions={transactions} onSelect={setSelected} /></div><aside className="market-rail"><DistrictActivity transactions={transactions} onDistrict={handleDistrict} /></aside></div></main>} />
         <Route path="/search" element={<main className="main route-page"><PageHeader eyebrow="APARTMENT FINDER" title="아파트 조건 검색" description="지역·예산·면적·준공연도 조건을 조합해 최근 거래 단지를 좁혀보세요." meta={`${new Set(transactions.map((item) => item.complex)).size.toLocaleString("ko-KR")}개 단지`} />{status}<PropertySearch transactions={transactions} source={source} initialBudget={budgetSearch} onSelect={setSelected} /><LoanCalculator /></main>} />
         <Route path="/records" element={<main className="main route-page"><PageHeader eyebrow="PRICE SIGNALS" title="신고가와 호가 흐름" description="직전 고점을 넘어선 실거래와 시장의 매물 가격 움직임을 함께 봅니다." meta="가격 신호" />{status}<RecordsAndSignals transactions={transactions} onSelect={setSelected} /></main>} />
         <Route path="/permits" element={<main className="main route-page"><PageHeader eyebrow="LAND PERMIT LEDGER" title="토지거래허가구역 거래" description="허가구역 안에서 신고된 아파트 거래를 구역별로 분리해 확인합니다." meta={`${transactions.filter((item) => item.permitZone).length.toLocaleString("ko-KR")}건`} />{status}<PermitPreview transactions={transactions} onSelect={setSelected} /></main>} />

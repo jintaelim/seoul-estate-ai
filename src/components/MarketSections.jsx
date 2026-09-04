@@ -107,6 +107,7 @@ export function TransactionVolumeRanking({ transactions, onSelect }) {
   const [period, setPeriod] = useState("thisYear");
   const [district, setDistrict] = useState("전체");
   const periodKey = period === "thisWeek" ? "week" : period === "thisMonth" ? "month" : period === "lastMonth" ? "previousMonth" : period === "thisYear" ? "year" : "all";
+  const dataDates = [...new Set(transactions.map((item) => item.dealDate))].sort();
   const window = periodWindow(periodKey, latestDate(transactions));
   const periodLabel = VOLUME_PERIODS.find(([key]) => key === period)?.[1] ?? "기간";
   const rangeLabel = period === "all"
@@ -114,6 +115,8 @@ export function TransactionVolumeRanking({ transactions, onSelect }) {
     : window.start === window.end
       ? window.start || "-"
       : `${window.start}~${window.end}`;
+  const coverageLabel = dataDates.length ? `${dataDates[0]}~${dataDates.at(-1)}` : "-";
+  const partialYear = period === "thisYear" && dataDates[0] && dataDates[0] > window.start;
   const filtered = period === "all"
     ? transactions
     : transactions.filter((item) => item.dealDate >= window.start && item.dealDate <= window.end);
@@ -151,7 +154,7 @@ export function TransactionVolumeRanking({ transactions, onSelect }) {
           {VOLUME_PERIODS.map(([key, label]) => <SegmentedControl.Item value={key} key={key}><SegmentedControl.ItemHiddenInput />{label}</SegmentedControl.Item>)}
         </SegmentedControl.Root>
       </div>
-      <div className="section-data-bar volume-summary"><span><b>{totalCount.toLocaleString("ko-KR")}</b>건 집계</span><span><b>{ranking.length.toLocaleString("ko-KR")}</b>개 단지</span><span>지역 <b>{district}</b></span><span>계약일 기준</span></div>
+      <div className="section-data-bar volume-summary"><span><b>{totalCount.toLocaleString("ko-KR")}</b>건 집계</span><span><b>{ranking.length.toLocaleString("ko-KR")}</b>개 단지</span><span>지역 <b>{district}</b></span><span>계약일 기준</span>{partialYear && <span>수집 범위 <b>{coverageLabel}</b></span>}</div>
       <div className="volume-ranking-list" aria-live="polite">
         {topRows.length ? topRows.map((item, index) => (
           <button className="volume-ranking-row" type="button" key={`${item.district}|${item.dong}|${item.complex}`} onClick={() => onSelect?.(item.latest)} aria-label={`${item.complex}, ${item.count}건 거래`}>
@@ -162,6 +165,7 @@ export function TransactionVolumeRanking({ transactions, onSelect }) {
         )) : <Empty>선택한 기간과 자치구에 집계된 거래가 없습니다.</Empty>}
       </div>
       {ranking.length > topRows.length && <p className="volume-ranking-note">거래량 상위 {topRows.length}개 단지를 표시하고 있습니다.</p>}
+      {partialYear && <p className="volume-ranking-note">올해 랭킹은 현재 저장된 원장 수집 범위 내에서 집계됩니다.</p>}
     </section>
   );
 }

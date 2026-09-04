@@ -12,7 +12,7 @@ export async function readTransactions() {
   const pageSize = 1000;
   for (let offset = 0; offset < 20000; offset += pageSize) {
     const url = new URL(`${SUPABASE_URL}/rest/v1/transactions`);
-    url.searchParams.set("select", "id,district,dong,complex,area,floor,price,deal_date,dealing_type,permit_zone");
+    url.searchParams.set("select", "id,district,dong,complex,area,floor,price,deal_date,dealing_type,permit_zone,apartments(approval_date)");
     url.searchParams.set("order", "deal_date.desc,id.desc");
     url.searchParams.set("limit", String(pageSize));
     url.searchParams.set("offset", String(offset));
@@ -30,7 +30,7 @@ export async function readTransactions() {
       area: Number(row.area) || 0,
       floor: Number(row.floor) || 0,
       price: Number(row.price) || 0,
-      builtYear: 0,
+      builtYear: Number(String(row.apartments?.approval_date || "").slice(0, 4)) || 0,
       dealDate: row.deal_date,
       dealingGbn: row.dealing_type || "",
       permitZone: row.permit_zone || null,

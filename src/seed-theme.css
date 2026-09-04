@@ -264,20 +264,8 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
 .status-tag.record, .hibadge { background: #fff0f2; color: #d9485f; }
 .status-tag.permit, .permit-badge { background: #fff6e8; color: #a96a12; }
 
-/* Hero title signal and full-height search action. */
+/* Hero title signal. */
 .hero-title em, .search-step, .hero-search-title .kicker { color: var(--accent); }
-.hero-submit-inline {
-  width: 100%;
-  min-width: 220px;
-  min-height: 84px;
-  height: 100%;
-  align-self: stretch;
-  border-radius: 0 13px 13px 0;
-}
-
-@media (max-width: 820px) {
-  .hero-submit-inline { min-width: 0; min-height: 70px; height: 70px; border-radius: 9px; }
-}
 
 /* Motion layer: short, interruptible feedback for frequent actions; restrained
    entrance motion for navigation and detail inspection. */

@@ -6,6 +6,7 @@
       "maxDuration": 60
     }
   },
+  "crons": [{ "path": "/api/cron-ingest", "schedule": "0 2 * * *" }],
   "rewrites": [
     { "source": "/transactions", "destination": "/index.html" },
     { "source": "/search", "destination": "/index.html" },

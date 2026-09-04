@@ -1,5 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { fetchMolit, runInBatches } from "../molit-fetch.js";
+import { persistTransactions, storageConfigured } from "./_storage.js";
 
 const SERVICE_KEY = process.env.MOLIT_API_KEY;
 
@@ -172,11 +173,17 @@ export default async function handler(req, res) {
     raw = computeRecentCounts(raw);
     raw.sort((a, b) => b.dealDate.localeCompare(a.dealDate));
 
+    let persistence = { persisted: false, reason: "storage-not-configured" };
+    if (storageConfigured) {
+      try { persistence = await persistTransactions(raw); } catch (error) { persistence = { persisted: false, reason: error.message }; }
+    }
+
     res.json({
       data: raw,
       source: "molit",
       fetchedAt: new Date().toISOString(),
       count: raw.length,
+      persistence,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

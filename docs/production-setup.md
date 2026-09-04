@@ -14,9 +14,14 @@ MOLIT_API_KEY=
 KAKAO_REST_API_KEY=
 REB_APT_API_KEY=
 DATABASE_URL=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+CRON_SECRET=
 ```
 
 `supabase/schema.sql`을 먼저 실행한 뒤 `DATABASE_URL`을 Vercel 프로젝트 환경변수에 등록합니다. API 키는 브라우저 코드에 넣지 않고 Functions에서만 읽습니다.
+
+현재 Vercel 함수는 `SUPABASE_URL`과 `SUPABASE_SERVICE_ROLE_KEY`가 모두 있을 때만 거래 원장을 Supabase REST API로 upsert합니다. `CRON_SECRET`을 등록하면 `/api/cron-ingest`를 보호할 수 있습니다.
 
 ## 단계
 

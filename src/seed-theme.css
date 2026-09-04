@@ -324,6 +324,9 @@ body { background: #f7f8fa; letter-spacing: -.012em; }
   box-shadow: 0 12px 30px rgba(17,19,24,.10);
 }
 
+/* Keep history rows aligned with the full card width on wide screens. */
+.deal-list-head, .di { width: 100%; box-sizing: border-box; }
+
 /* Motion layer: short, interruptible feedback for frequent actions; restrained
    entrance motion for navigation and detail inspection. */
 :root {

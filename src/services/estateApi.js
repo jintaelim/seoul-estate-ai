@@ -1,5 +1,6 @@
 const CACHE_KEY = "seoul_estate_react_v1";
 const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_MAX_ROWS = 2000;
 
 export function readTransactionCache() {
   try {
@@ -15,7 +16,14 @@ export async function fetchTransactions() {
   if (!response.ok) throw new Error(`실거래 API ${response.status}`);
   const payload = await response.json();
   if (!payload.data?.length) throw new Error(payload.error || "실거래 데이터가 비어 있습니다.");
-  localStorage.setItem(CACHE_KEY, JSON.stringify({ data: payload.data, savedAt: Date.now() }));
+  // 전체 원장(수천 건)은 브라우저 localStorage 한도를 넘을 수 있습니다.
+  // 화면에는 전체 응답을 그대로 반환하되, 오프라인 fallback용 최근 일부만 저장합니다.
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: payload.data.slice(0, CACHE_MAX_ROWS), savedAt: Date.now() }));
+  } catch {
+    // 저장 공간이 부족해도 API 응답 자체는 성공으로 처리합니다.
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
+  }
   return payload;
 }
 

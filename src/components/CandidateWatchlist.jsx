@@ -3,6 +3,7 @@ import { ActionButton, Chip } from "@seed-design/react";
 import { fetchCandidates } from "../services/estateApi";
 import { formatPrice } from "../utils";
 import { SectionHeader } from "./Common";
+import { SeedSelect } from "./SeedFormControls";
 
 const filterLabels = [["all", "전체"], ["tier1", "1티어"], ["tier2", "2티어"], ["watch", "관찰"], ["matched", "거래 있음"]];
 
@@ -34,7 +35,7 @@ export default function CandidateWatchlist() {
 
   return (
     <section className="card" id="candidateWatch">
-      <SectionHeader eyebrow="MOVE-UP WATCHLIST" title="갈아타기 후보 실거래" description={`${months}개월 범위에서 후보 단지명과 국토부 원장을 매칭합니다.`} action={<div className="candidate-actions"><select className="candidate-select" value={months} onChange={(event) => setMonths(Number(event.target.value))}><option value="12">최근 12개월</option><option value="36">최근 36개월</option><option value="60">최근 60개월</option><option value="120">최근 120개월</option></select><ActionButton className="tsearch" variant="neutralWeak" size="small" type="button" onClick={() => setRefreshKey((key) => key + 1)}>새로고침</ActionButton></div>} />
+      <SectionHeader eyebrow="MOVE-UP WATCHLIST" title="갈아타기 후보 실거래" description={`${months}개월 범위에서 후보 단지명과 국토부 원장을 매칭합니다.`} action={<div className="candidate-actions"><SeedSelect className="candidate-period-select" label="조회 기간" value={months} onChange={(value) => setMonths(Number(value))} options={[{ value: 12, label: "최근 12개월" }, { value: 36, label: "최근 36개월" }, { value: 60, label: "최근 60개월" }, { value: 120, label: "최근 120개월" }]} /><ActionButton className="tsearch" variant="neutralWeak" size="small" type="button" onClick={() => setRefreshKey((key) => key + 1)}>새로고침</ActionButton></div>} />
       <div className="candidate-stats">
         <div className="candidate-stat"><span>후보 단지</span><strong>{state.items.length}개</strong></div>
         <div className="candidate-stat"><span>거래 매칭</span><strong>{matched}개</strong></div>

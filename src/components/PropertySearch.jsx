@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ActionButton, Chip } from "@seed-design/react";
 import { formatPrice, isRecord, latestDate, pricePerPyeong, representativeTransactions } from "../utils";
 import { SectionHeader } from "./Common";
+import { SeedSelect, SeedTextInput } from "./SeedFormControls";
 
 const themes = [
   ["all", "전체"], ["latest", "최신 실거래"], ["record", "신고가"],
@@ -14,6 +15,7 @@ export default function PropertySearch({ transactions, source, initialBudget, on
   const [limit, setLimit] = useState(8);
   const districts = useMemo(() => ["전체", ...new Set(transactions.map((item) => item.district))], [transactions]);
   const update = (key) => (event) => { setFilters((current) => ({ ...current, [key]: event.target.value })); setLimit(8); };
+  const updateValue = (key) => (value) => { setFilters((current) => ({ ...current, [key]: value })); setLimit(8); };
 
   const rows = useMemo(() => {
     const keyword = filters.keyword.trim().toLowerCase();
@@ -48,12 +50,13 @@ export default function PropertySearch({ transactions, source, initialBudget, on
     <section className="card property-search-card" id="propertySearch">
       <SectionHeader eyebrow="APARTMENT FINDER" title="조건으로 단지 좁히기" description="단지별 최근 실거래를 가격·면적·준공연도로 비교합니다." action={<span className={`source-pill ${source}`}><i />{source === "molit" ? "국토부 실데이터" : source === "cache" ? "1시간 캐시" : "샘플 데이터"}</span>} />
       <div className="react-search-grid">
-        <label className="search-wide"><span>단지명 · 구 · 동</span><input type="search" placeholder="예: 반포, 성수동, 은평구" value={filters.keyword} onChange={update("keyword")} /></label>
-        <label><span>자치구</span><select value={filters.district} onChange={update("district")}>{districts.map((item) => <option key={item}>{item}</option>)}</select></label>
-        <label><span>거래가</span><span className="price-range"><input aria-label="최소 거래가" type="number" min="0" placeholder="최소" value={filters.min} onChange={update("min")} /><i>–</i><input aria-label="최대 거래가" type="number" min="0" placeholder="최대" value={filters.max} onChange={update("max")} /></span></label>
-        <label><span>전용면적</span><select value={filters.area} onChange={update("area")}><option value="0">전체</option><option value="59">59㎡ 이상</option><option value="84">84㎡ 이상</option><option value="114">114㎡ 이상</option></select></label>
-        <label><span>준공</span><select value={filters.built} onChange={update("built")}><option value="0">전체</option><option value="2020">2020년 이후</option><option value="2015">2015년 이후</option><option value="2010">2010년 이후</option></select></label>
-        <label><span>정렬</span><select value={filters.sort} onChange={update("sort")}><option value="latest">최신 거래순</option><option value="priceDesc">가격 높은순</option><option value="priceAsc">가격 낮은순</option><option value="activity">거래 많은순</option></select></label>
+        <SeedTextInput className="search-wide" label="단지명 · 구 · 동" type="search" placeholder="예: 반포, 성수동, 은평구" value={filters.keyword} onChange={update("keyword")} />
+        <SeedSelect label="자치구" value={filters.district} onChange={updateValue("district")} options={districts} />
+        <SeedTextInput label="최소 거래가" type="number" min="0" placeholder="0" suffix="억" value={filters.min} onChange={update("min")} />
+        <SeedTextInput label="최대 거래가" type="number" min="0" placeholder="제한 없음" suffix="억" value={filters.max} onChange={update("max")} />
+        <SeedSelect label="전용면적" value={filters.area} onChange={updateValue("area")} options={[{ value: "0", label: "전체" }, { value: "59", label: "59㎡ 이상" }, { value: "84", label: "84㎡ 이상" }, { value: "114", label: "114㎡ 이상" }]} />
+        <SeedSelect label="준공" value={filters.built} onChange={updateValue("built")} options={[{ value: "0", label: "전체" }, { value: "2020", label: "2020년 이후" }, { value: "2015", label: "2015년 이후" }, { value: "2010", label: "2010년 이후" }]} />
+        <SeedSelect label="정렬" value={filters.sort} onChange={updateValue("sort")} options={[{ value: "latest", label: "최신 거래순" }, { value: "priceDesc", label: "가격 높은순" }, { value: "priceAsc", label: "가격 낮은순" }, { value: "activity", label: "거래 많은순" }]} />
       </div>
       <div className="search-tool-row">
         <div className="listing-theme-row">{themes.map(([key, label]) => <Chip.Root className={`rpill ${filters.theme === key ? "on" : ""}`} variant={filters.theme === key ? "solid" : "outlineWeak"} size="small" type="button" key={key} onClick={() => { setFilters((current) => ({ ...current, theme: key })); setLimit(8); }}><Chip.Label>{label}</Chip.Label></Chip.Root>)}</div>

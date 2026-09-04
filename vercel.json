@@ -5,5 +5,12 @@
     "api/transactions.js": {
       "maxDuration": 60
     }
+  },
+  "rewrites": [
+    { "source": "/transactions", "destination": "/index.html" },
+    { "source": "/search", "destination": "/index.html" },
+    { "source": "/records", "destination": "/index.html" },
+    { "source": "/permits", "destination": "/index.html" },
+    { "source": "/watchlist", "destination": "/index.html" }
   }
 }

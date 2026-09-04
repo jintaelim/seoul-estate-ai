@@ -102,6 +102,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .seed-segmented label { cursor: pointer; }
 .candidate-period-select { min-width: 150px; }
 .candidate-period-select [data-part="label"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.permit-header-actions { display: flex; align-items: end; gap: var(--seed-dimension-x3); }
+.permit-district-select { width: 170px; }
+.permit-district-select [data-part="label"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+.permit-filter-state { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 9px 12px; border-radius: var(--seed-radius-r3); background: var(--seed-color-bg-warning-weak); color: var(--seed-color-fg-warning); font-size: 11px; }
+.permit-filter-state span { color: var(--seed-color-fg-neutral-muted); font-weight: 700; }
+.permit-filter-state strong { font-size: 12px; }
+.permit-filter-state i { font-style: normal; color: var(--seed-color-fg-neutral-subtle); }
 
 .listing-table-row, .di, .rec-item, .candidate-row, .dcell { transition: var(--seed-feedback-scale-transition), background-color var(--seed-duration-color-transition); }
 .listing-table-row:hover, .di:hover, .rec-item:hover, .candidate-row:hover { background: var(--seed-color-bg-layer-default-pressed); }
@@ -130,6 +137,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .page-back { margin-bottom: 20px; }
   .react-search-grid { grid-template-columns: 1fr 1fr; }
   .search-wide { grid-column: 1 / -1; }
+  .permit-header-actions { width: 100%; align-items: center; justify-content: space-between; }
+  .permit-district-select { width: 180px; }
 }
 
 @media (max-width: 560px) {
@@ -150,6 +159,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .react-search-grid { grid-template-columns: 1fr; }
   .search-wide { grid-column: auto; }
   .seed-segmented { width: 100%; min-width: 0; }
+  .permit-header-actions { align-items: stretch; gap: 10px; }
+  .permit-district-select { flex: 1; width: auto; }
+  .permit-count b { font-size: 22px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,6 +3,7 @@ import { SegmentedControl } from "@seed-design/react";
 import { askingSignals } from "../data/sampleTransactions";
 import { formatPrice, isRecord, latestDate, pricePerPyeong, recordRate } from "../utils";
 import { DealRow, Empty, SectionHeader } from "./Common";
+import { SeedSelect } from "./SeedFormControls";
 
 export function NewClosings({ transactions, onSelect }) {
   const [tab, setTab] = useState("latest");
@@ -55,8 +56,26 @@ export function History({ transactions, onSelect }) {
 export function PermitPreview({ transactions, onSelect }) {
   const permits = transactions.filter((item) => item.permitZone);
   const zones = [...new Set(permits.map((item) => item.permitZone))];
+  const districts = ["전체", ...new Set(permits.map((item) => item.district).filter(Boolean).sort())];
   const [zone, setZone] = useState("전체");
+  const [district, setDistrict] = useState("전체");
   const [limit, setLimit] = useState(8);
-  const visible = zone === "전체" ? permits : permits.filter((item) => item.permitZone === zone);
-  return <section className="card permit-section" id="permits"><SectionHeader eyebrow="LAND PERMIT LEDGER" title="토지거래허가구역 거래" description="허가구역 안에서 신고된 아파트 거래를 구역별로 확인합니다." action={<span className="permit-count"><b>{permits.length.toLocaleString("ko-KR")}</b>건 <small>/ {zones.length}개 구역</small></span>} /><div className="permit-notice"><span className="notice-mark">!</span><p><strong>허가 여부가 아닌 구역 내 실거래입니다.</strong><small>실제 허가 상태와 이용 목적은 관할 구청 자료를 함께 확인하세요.</small></p></div><div className="permit-zone-tabs"><button className={zone === "전체" ? "on" : ""} type="button" onClick={() => { setZone("전체"); setLimit(8); }}>전체 <b>{permits.length}</b></button>{zones.map((name) => <button className={zone === name ? "on" : ""} type="button" key={name} onClick={() => { setZone(name); setLimit(8); }}>{name} <b>{permits.filter((item) => item.permitZone === name).length}</b></button>)}</div><div className="deal-list permit-preview-list"><div className="deal-list-head"><span>지역</span><span>단지 / 허가구역</span><span>면적</span><span>거래금액</span><span>계약일</span></div>{visible.slice(0, limit).map((item) => <DealRow item={item} onSelect={onSelect} key={item.id} />)}</div>{limit < visible.length && <button className="morebtn" type="button" onClick={() => setLimit((value) => value + 8)}>+{visible.length - limit}건 더 보기 ↓</button>}</section>;
+  const visible = permits.filter((item) => (zone === "전체" || item.permitZone === zone) && (district === "전체" || item.district === district));
+  const selectDistrict = (value) => { setDistrict(value); setLimit(8); };
+  const selectZone = (value) => { setZone(value); setLimit(8); };
+  return (
+    <section className="card permit-section" id="permits">
+      <SectionHeader
+        eyebrow="LAND PERMIT LEDGER"
+        title="토지거래허가구역 거래"
+        description="서울 자치구와 허가구역을 함께 선택해 거래를 좁혀봅니다."
+        action={<div className="permit-header-actions"><SeedSelect className="permit-district-select" label="자치구 선택" value={district} onChange={selectDistrict} options={districts} /><span className="permit-count"><b>{visible.length.toLocaleString("ko-KR")}</b>건 <small>/ {zones.length}개 구역</small></span></div>}
+      />
+      <div className="permit-notice"><span className="notice-mark">!</span><p><strong>허가 여부가 아닌 구역 내 실거래입니다.</strong><small>실제 허가 상태와 이용 목적은 관할 구청 자료를 함께 확인하세요.</small></p></div>
+      <div className="permit-zone-tabs"><button className={zone === "전체" ? "on" : ""} type="button" onClick={() => selectZone("전체")}>전체 <b>{permits.filter((item) => district === "전체" || item.district === district).length}</b></button>{zones.map((name) => <button className={zone === name ? "on" : ""} type="button" key={name} onClick={() => selectZone(name)}>{name} <b>{permits.filter((item) => item.permitZone === name && (district === "전체" || item.district === district)).length}</b></button>)}</div>
+      <div className="permit-filter-state"><span>현재 필터</span><strong>{district === "전체" ? "서울 전체 자치구" : district}</strong><i>×</i><strong>{zone === "전체" ? "전체 허가구역" : zone}</strong></div>
+      <div className="deal-list permit-preview-list"><div className="deal-list-head"><span>지역</span><span>단지 / 허가구역</span><span>면적</span><span>거래금액</span><span>계약일</span></div>{visible.length ? visible.slice(0, limit).map((item) => <DealRow item={item} onSelect={onSelect} key={item.id} />) : <Empty>선택한 자치구와 허가구역에 거래가 없습니다.</Empty>}</div>
+      {limit < visible.length && <button className="morebtn" type="button" onClick={() => setLimit((value) => value + 8)}>+{visible.length - limit}건 더 보기 ↓</button>}
+    </section>
+  );
 }

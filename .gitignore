@@ -1,3 +1,9 @@
 node_modules/
 .env
 .vercel
+
+# 국토부 실거래 원본 API 응답 캐시 (월·지역 단위, 용량이 커서 커밋하지 않음)
+# 집계 결과물인 data/regime-index.json 은 커밋 대상. server.js를 계속 켜두면 매일
+# 자동으로 수집·재생성됩니다(README "매일 자동 갱신" 참고). Vercel로 서비스할 때는
+# REGIME_AUTO_PUSH=1 로 켜야 이 파일이 깃허브에 올라가 Vercel도 최신 데이터를 받습니다.
+data/cache/

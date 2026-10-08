@@ -4,6 +4,18 @@
   "functions": {
     "api/transactions.js": {
       "maxDuration": 60
+    },
+    "api/candidate-transactions.js": {
+      "maxDuration": 60
+    },
+    "api/complex-info.js": {
+      "maxDuration": 30
+    },
+    "api/regime-search.js": {
+      "maxDuration": 15
+    },
+    "api/regime-complex.js": {
+      "maxDuration": 15
     }
   }
 }

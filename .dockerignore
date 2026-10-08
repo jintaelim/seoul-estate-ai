@@ -1,0 +1,12 @@
+node_modules
+.git
+.env
+.env.example
+.claude
+.vercel
+*.md
+
+# 로컬에서 모은 원본 캐시/인덱스는 이미지에 넣지 않는다 — Fly Volume이 런타임에
+# /app/data 에 마운트되어 그 안의 실제 데이터로 대체된다(빈 상태로 시작해 자동 갱신됨).
+data/cache
+data/regime-index.json

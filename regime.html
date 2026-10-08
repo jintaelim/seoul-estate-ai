@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>정권별 아파트 상승률 비교 — Seoul Estate AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="regime.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="index.html"><span class="brand-dot"></span>Seoul Estate AI</a>
+  <nav class="tnav">
+    <a href="index.html">홈으로</a>
+    <a href="regime.html" class="rg-nav-active">정권별 비교</a>
+  </nav>
+</header>
+
+<main class="rg-main">
+
+  <section class="rg-hero">
+    <span class="kicker">REGIME COMPARISON · 국토교통부 실거래가 기준</span>
+    <h1 class="rg-title">정권별 아파트 상승률 비교</h1>
+    <p class="rg-desc">문재인·윤석열·이재명 정부 구간별로 아파트 실거래가 상승률을 비교합니다. 수집된 실거래 데이터만 표시하며, 값이 없는 구간은 임의로 채우지 않고 "데이터 없음"으로 남겨둡니다.</p>
+    <div class="rg-status" id="rgStatus">불러오는 중…</div>
+  </section>
+
+  <nav class="rg-tabs" id="rgTabs">
+    <button class="rg-tab on" type="button" data-tab="search">검색</button>
+    <button class="rg-tab" type="button" data-tab="compare">비교하기 <span class="rg-tab-count" id="rgCompareCount">0</span></button>
+  </nav>
+
+  <!-- 검색 탭 -->
+  <section class="rg-panel" id="rgSearchPanel">
+    <div class="rg-search-bar">
+      <select id="rgDistrictSelect" aria-label="지역 선택">
+        <option value="">전체 지역</option>
+      </select>
+      <input type="text" id="rgQueryInput" placeholder="아파트 이름 검색 (예: 래미안, 상계한양…)" autocomplete="off" />
+      <button type="button" id="rgSearchBtn" class="rg-btn-primary">검색</button>
+    </div>
+
+    <div class="rg-preset-row">
+      <span>추천 비교 세트</span>
+      <button type="button" id="rgPresetBtn" class="rg-btn-ghost">기본 프리셋 불러오기 (상계한양 외 9곳)</button>
+    </div>
+    <div id="rgPresetStatus" class="rg-preset-status" hidden></div>
+
+    <div id="rgSearchResults" class="rg-search-results"></div>
+  </section>
+
+  <!-- 비교하기 탭 -->
+  <section class="rg-panel" id="rgComparePanel" hidden>
+    <div class="rg-compare-head">
+      <div>
+        <h2>비교 목록</h2>
+        <p class="rg-sub">기준 단지를 지정하면 나머지 단지의 상승률을 상대 지수로 비교할 수 있어요.</p>
+      </div>
+      <button type="button" id="rgAddBtn" class="rg-btn-primary">+ 아파트 추가</button>
+    </div>
+
+    <div id="rgCompareCards" class="rg-compare-cards"></div>
+
+    <div id="rgChartsWrap" class="rg-charts-wrap" hidden>
+      <section class="rg-chart-card">
+        <h3>연도별 실거래가 추이</h3>
+        <p class="rg-chart-note">배경 음영은 정권 구간(문재인 → 윤석열 → 이재명)을 나타냅니다. 데이터가 없는 구간은 선이 끊겨요.</p>
+        <div id="rgTrendChart"></div>
+        <div id="rgTrendLegend" class="rg-legend"></div>
+      </section>
+
+      <section class="rg-chart-card">
+        <h3>연도별 전년 대비 상승률</h3>
+        <div id="rgYoyHeatmap" class="rg-heatmap-wrap"></div>
+      </section>
+
+      <section class="rg-chart-card">
+        <h3>정권별 상승률 비교</h3>
+        <div id="rgRegimeBars"></div>
+      </section>
+
+      <section class="rg-chart-card">
+        <h3>기준 단지 대비 상대성 <span class="rg-chart-note-inline" id="rgBaseLabel"></span></h3>
+        <div id="rgRelativeBars"></div>
+      </section>
+    </div>
+  </section>
+
+</main>
+
+<!-- 검색 모달 (비교하기 탭에서 아파트 추가) -->
+<div class="rg-modal-overlay" id="rgModalOverlay" hidden>
+  <div class="rg-modal">
+    <div class="rg-modal-head">
+      <h2>비교할 아파트 추가</h2>
+      <button type="button" id="rgModalClose" class="rg-modal-close" aria-label="닫기">✕</button>
+    </div>
+    <div class="rg-search-bar">
+      <select id="rgModalDistrictSelect" aria-label="지역 선택">
+        <option value="">전체 지역</option>
+      </select>
+      <input type="text" id="rgModalQueryInput" placeholder="아파트 이름 검색" autocomplete="off" />
+      <button type="button" id="rgModalSearchBtn" class="rg-btn-primary">검색</button>
+    </div>
+    <div id="rgModalResults" class="rg-search-results"></div>
+  </div>
+</div>
+
+<footer class="rg-footer">
+  <span>데이터 출처: 국토교통부 아파트 매매 실거래가 (data.go.kr)</span>
+  <span>실제 수집된 거래만 표시 — 샘플·추정 데이터를 포함하지 않습니다</span>
+</footer>
+
+<script src="regime.js" defer></script>
+</body>
+</html>

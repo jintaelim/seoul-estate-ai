@@ -1,0 +1,40 @@
+# Fly.io 배포 설정
+# app 이름은 Fly 전체에서 유일해야 합니다 — 아래 이름이 이미 쓰이고 있으면
+# `fly launch` 실행 시 다른 이름을 고르라고 안내됩니다. (README "Fly.io 배포" 참고)
+app = "seoul-estate-ai"
+primary_region = "nrt"  # 도쿄 — 한국에서 가장 가까운 Fly 리전. `fly platform regions`로 다른 후보 확인 가능
+
+[build]
+
+[env]
+PORT = "3000"
+# REGIME_AUTO_PUSH 는 설정하지 않음(기본 꺼짐) — 이 서버 자체가 실서비스이므로
+# 깃허브에 커밋을 되돌려 보낼 필요가 없습니다. Vercel을 병행해서 쓸 계획이면
+# `fly secrets set REGIME_AUTO_PUSH=1` 로 켤 수 있습니다(그 경우 이미지에
+# git이 필요해 Dockerfile도 함께 손봐야 합니다 — README 참고).
+
+# 매일 자동 갱신(server.js 내부 스케줄)이 정상 동작하려면 인스턴스가 항상 떠 있어야 합니다.
+# auto_stop을 켜두면 유휴 시 꺼졌다가 요청 시 재시작되는데, 그러면 지정 시각(기본 6시)에
+# 아무도 접속하지 않은 경우 자동 갱신이 그 시각에 못 돌 수 있습니다. 그래서 최소 1대는 계속 띄워둡니다.
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    path = "/"
+    timeout = "5s"
+
+# 실거래 캐시 + 정권별 비교 인덱스를 재배포/재시작에도 보존
+[mounts]
+  source = "regime_data"
+  destination = "/app/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

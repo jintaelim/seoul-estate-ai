@@ -1,0 +1,120 @@
+/* 정권별 아파트 상승률 비교 — styles.css 의 디자인 토큰(--accent, --t1..t3, --bg, --card, --div, --r1..r4)을 그대로 재사용 */
+
+.rg-nav-active { color: var(--accent); font-weight: 700; }
+
+.rg-main{max-width:1100px;margin:0 auto;padding:24px 24px 72px;display:flex;flex-direction:column;gap:20px}
+
+.rg-hero{background:var(--card);border:1px solid var(--div);border-radius:var(--r3);box-shadow:var(--sh);padding:32px}
+.rg-title{font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:8px;color:var(--t1)}
+.rg-desc{margin-top:10px;color:var(--t2);font-size:15px;line-height:1.6;max-width:720px}
+.rg-status{margin-top:16px;display:inline-flex;padding:8px 14px;border-radius:99px;font-size:13.5px;font-weight:700}
+.rg-status.ok{background:var(--accent-l);color:var(--accent)}
+.rg-status.warn{background:#fff6e0;color:#a15c00}
+
+.rg-tabs{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:99px;width:fit-content}
+.rg-tab{padding:10px 20px;border-radius:99px;font-size:15px;font-weight:700;color:var(--t2);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px}
+.rg-tab.on{background:var(--card);color:var(--t1);box-shadow:var(--sh)}
+.rg-tab-count{display:inline-flex;min-width:18px;height:18px;padding:0 5px;align-items:center;justify-content:center;background:var(--accent);color:#fff;border-radius:99px;font-size:11px}
+
+.rg-panel{display:flex;flex-direction:column;gap:16px}
+
+/* 검색 바 */
+.rg-search-bar{display:flex;gap:8px;flex-wrap:wrap}
+.rg-search-bar select{height:46px;padding:0 14px;border:1px solid var(--div);border-radius:var(--r2);background:var(--card);color:var(--t1);font-size:14.5px}
+.rg-search-bar input[type=text]{flex:1;min-width:220px;height:46px;padding:0 16px;border:1px solid var(--div);border-radius:var(--r2);background:var(--card);color:var(--t1);font-size:14.5px}
+.rg-search-bar input:focus,.rg-search-bar select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-l)}
+
+.rg-btn-primary{height:46px;padding:0 22px;border:none;border-radius:var(--r2);background:var(--accent);color:#fff;font-size:14.5px;font-weight:800;cursor:pointer}
+.rg-btn-primary:hover{opacity:.9}
+.rg-btn-ghost{height:38px;padding:0 14px;border:1px solid var(--div);border-radius:99px;background:var(--card);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer}
+.rg-btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.rg-btn-ghost.danger:hover{border-color:var(--danger);color:var(--danger)}
+.rg-btn-ghost:disabled{opacity:.5;cursor:not-allowed}
+
+.rg-preset-row{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--t3);font-weight:700}
+.rg-preset-status{padding:10px 14px;background:var(--bg);border-radius:var(--r2);font-size:13px;color:var(--t2);line-height:1.6}
+.rg-preset-missing{color:#a15c00}
+.rg-warn-note{margin-bottom:14px;padding:12px 14px;background:#fff6e0;border:1px solid rgba(161,92,0,.18);border-radius:var(--r2);font-size:13px;color:#7a4700;line-height:1.6}
+.rg-warn-note strong{font-weight:800}
+
+/* 검색 결과 카드 */
+.rg-search-results{display:flex;flex-direction:column;gap:10px}
+.rg-empty{padding:40px 20px;text-align:center;color:var(--t3);font-size:14.5px;line-height:1.7;background:var(--bg);border-radius:var(--r2)}
+
+.rg-result-card{background:var(--card);border:1px solid var(--div);border-radius:var(--r3);padding:16px 18px}
+.rg-result-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rg-result-head h3{font-size:16.5px;font-weight:800;color:var(--t1)}
+.rg-result-meta{font-size:13px;color:var(--t3)}
+.rg-bucket-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.rg-bucket-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 12px;border:1px solid var(--div);border-radius:var(--r2);background:var(--bg);cursor:pointer;font-size:12.5px;color:var(--t2);font-weight:600;min-width:110px}
+.rg-bucket-chip em{font-style:normal;color:var(--t3);font-weight:500;margin-left:4px}
+.rg-bucket-chip small{font-size:13px;font-weight:800;color:var(--t1)}
+.rg-chip-add{font-size:11px;font-weight:800;color:var(--accent)}
+.rg-bucket-chip:hover{border-color:var(--accent)}
+.rg-bucket-chip.added,.rg-bucket-chip:disabled{opacity:.55;cursor:default}
+.rg-bucket-chip.added .rg-chip-add{color:var(--t3)}
+
+/* 비교하기 탭 */
+.rg-compare-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.rg-compare-head h2{font-size:20px;font-weight:800;color:var(--t1)}
+.rg-sub{font-size:13.5px;color:var(--t3);margin-top:4px}
+
+.rg-compare-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.rg-compare-card{position:relative;background:var(--card);border:1px solid var(--div);border-radius:var(--r3);padding:16px}
+.rg-compare-card.is-base{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.rg-base-badge{position:absolute;top:-9px;right:12px;background:var(--accent);color:#fff;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px}
+.rg-compare-card h3{font-size:15.5px;font-weight:800;color:var(--t1);padding-right:8px}
+.rg-card-price{margin-top:10px;font-size:19px;font-weight:800;color:var(--t1)}
+.rg-card-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
+/* 차트 카드 */
+.rg-charts-wrap{display:flex;flex-direction:column;gap:16px}
+.rg-chart-card{background:var(--card);border:1px solid var(--div);border-radius:var(--r3);padding:20px}
+.rg-chart-card h3{font-size:16px;font-weight:800;color:var(--t1)}
+.rg-chart-note{font-size:12.5px;color:var(--t3);margin-top:4px}
+.rg-chart-note-inline{font-size:13px;font-weight:600;color:var(--accent)}
+
+.rg-svg{width:100%;height:auto}
+.rg-gridline{stroke:var(--div);stroke-width:1}
+.rg-zeroline{stroke:var(--t3);stroke-width:1;stroke-dasharray:3,3}
+.rg-axis-label{font-size:10.5px;fill:var(--t3);font-family:var(--font)}
+.rg-axis-sub{font-size:9px}
+.rg-band-label{font-size:10px;fill:var(--t3);font-weight:700}
+.rg-bar-value{font-size:10.5px;fill:var(--t1);font-weight:700}
+.rg-bar-nodata{font-size:9px;fill:var(--t3)}
+
+.rg-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+.rg-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--t2);font-weight:600}
+.rg-legend-item i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* YoY 히트맵 테이블 */
+.rg-heatmap-wrap{overflow-x:auto}
+.rg-heatmap{border-collapse:collapse;width:100%;font-size:13px}
+.rg-heatmap th,.rg-heatmap td{padding:8px 10px;text-align:center;white-space:nowrap;border:1px solid var(--div)}
+.rg-heatmap thead th{background:var(--bg);color:var(--t2);font-weight:700}
+.rg-heatmap tbody th{text-align:left;background:var(--bg);color:var(--t1);font-weight:700;min-width:120px}
+.rg-heatmap tbody th small{display:block;color:var(--t3);font-weight:500;font-size:11px}
+.rg-nodata{color:var(--t3);font-size:11.5px}
+.rg-warn-icon{font-size:11px;color:#a15c00}
+
+/* 검색 모달 */
+.rg-modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(5,11,88,.35);display:flex;align-items:center;justify-content:center;padding:20px}
+.rg-modal{width:min(640px,100%);max-height:85vh;overflow-y:auto;background:var(--card);border-radius:var(--r3);box-shadow:var(--sh2);padding:24px}
+.rg-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.rg-modal-head h2{font-size:18px;font-weight:800;color:var(--t1)}
+.rg-modal-close{width:32px;height:32px;border-radius:50%;border:1px solid var(--div);background:var(--bg);cursor:pointer;font-size:14px;color:var(--t2)}
+
+.rg-footer{max-width:1100px;margin:0 auto;padding:20px 24px 40px;display:flex;gap:20px;flex-wrap:wrap;border-top:1px solid var(--div);color:var(--t3);font-size:13px}
+
+/* [hidden] 은 UA 기본 스타일(display:none)인데, 이 파일의 여러 클래스가 display:flex 를
+   지정해 같은 특이도에서 author 스타일이 UA 스타일을 항상 이겨버린다(hidden 이어도 보이는 버그).
+   이 페이지의 모든 요소에 대해 [hidden] 이 항상 이기도록 범용 규칙으로 못박는다. */
+[hidden]{display:none!important}
+
+@media(max-width:640px){
+  .rg-main{padding:16px 16px 56px}
+  .rg-hero{padding:22px}
+  .rg-title{font-size:24px}
+  .rg-search-bar select,.rg-search-bar input{width:100%}
+  .rg-search-bar{flex-direction:column}
+}

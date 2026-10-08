@@ -4,7 +4,11 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "collect:regime": "node scripts/collect-regime-transactions.mjs",
+    "build:regime-index": "node scripts/build-regime-index.mjs",
+    "check:regime-index": "node scripts/check-regime-index.mjs",
+    "update:regime": "npm run collect:regime && npm run build:regime-index && npm run check:regime-index"
   },
   "dependencies": {
     "express": "^4.19.2",

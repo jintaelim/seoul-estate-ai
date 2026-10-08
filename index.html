@@ -1,232 +1,249 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>서울 부동산 데이터 검색비서</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="#" aria-label="서울 부동산 데이터 검색비서 홈">
-        <span class="brand-mark"></span>
-        <span>Seoul Estate AI</span>
-      </a>
-      <nav class="nav" aria-label="주요 메뉴">
-        <a href="#assistant">AI 검색</a>
-        <a href="#transactions">실거래</a>
-        <a href="#records">신고가</a>
-        <a href="#permits">토허구역</a>
-      </nav>
-    </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seoul Estate AI — 서울 부동산</title>
+  <link href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/pretendard.css" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
 
-    <main class="shell">
-      <section class="hero-grid" aria-label="서울 부동산 데이터 대시보드">
-        <div class="command-card" id="assistant">
-          <div class="card-kicker">ON-DEVICE SEARCH</div>
-          <h1>서울 실거래 안에서 원하는 매물을 바로 찾기</h1>
-          <form class="search-form" id="assistantForm">
-            <label class="sr-only" for="assistantInput">검색 조건</label>
-            <textarea
-              id="assistantInput"
-              name="query"
-              rows="3"
-              placeholder="예: 마포구나 성동구에서 12억 이하, 전용 59 이상, 2015년 이후 준공, 최근 6개월 거래가 있는 곳"
-            ></textarea>
-            <button class="send-button" type="submit" aria-label="검색 실행" title="검색 실행">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M5 12h13" />
-                <path d="m13 6 6 6-6 6" />
-              </svg>
-            </button>
-          </form>
-          <div class="quick-prompts" aria-label="빠른 검색 조건">
-            <button type="button" data-prompt="강남구 25억 이하, 전용 84 이상, 신고가는 제외하고 최근 거래 많은 곳">강남 84㎡</button>
-            <button type="button" data-prompt="마포구나 성동구 12억 이하, 전용 59 이상, 2015년 이후 준공">12억 이하</button>
-            <button type="button" data-prompt="토지거래허가구역 안의 최신 거래와 신고가를 보여줘">토허구역</button>
-            <button type="button" data-prompt="최근 6개월 신고가만 가격 상승률 순으로 정리해줘">신고가</button>
-          </div>
-          <div class="assistant-thread" id="assistantThread" aria-live="polite"></div>
-        </div>
+<header class="topbar">
+  <a class="brand" href="#"><span class="brand-dot"></span>Seoul Estate AI</a>
+  <nav class="tnav">
+    <a href="#finder">맞춤찾기</a>
+    <a href="#closings">실거래</a>
+    <a href="#candidateWatch">후보단지</a>
+    <a href="#records">신고가</a>
+    <a href="#districts">활성도</a>
+    <a href="#permits">토허구역</a>
+    <a href="regime.html">정권별 비교</a>
+  </nav>
+</header>
 
-        <aside class="market-card" aria-label="오늘의 시장 요약">
-          <div class="market-visual">
-            <div class="skyline" aria-hidden="true">
-              <span></span><span></span><span></span><span></span><span></span>
-            </div>
-            <svg class="line-chart" aria-hidden="true" viewBox="0 0 240 110">
-              <path class="gridline" d="M8 82H232M8 54H232M8 26H232" />
-              <path class="trend-fill" d="M8 76 C40 68 54 86 82 72 C112 56 120 42 150 50 C178 58 194 30 232 20 L232 110 L8 110 Z" />
-              <path class="trend-line" d="M8 76 C40 68 54 86 82 72 C112 56 120 42 150 50 C178 58 194 30 232 20" />
-              <circle cx="232" cy="20" r="5" />
-            </svg>
-          </div>
-          <div>
-            <div class="card-kicker">SEOUL MARKET</div>
-            <h2>오늘 감지된 거래 신호</h2>
-          </div>
-          <div class="metric-stack">
-            <div data-metric-nav="deals" role="button" tabindex="0" aria-label="오늘 실거래 전체 보기">
-              <span id="metricDeals">0</span>
-              <small>오늘 실거래</small>
-            </div>
-            <div data-metric-nav="records" role="button" tabindex="0" aria-label="신고가 전체 보기">
-              <span id="metricRecords">0</span>
-              <small>신고가</small>
-            </div>
-            <div data-metric-nav="permits" role="button" tabindex="0" aria-label="토허구역 전체 보기">
-              <span id="metricPermits">0</span>
-              <small>토허구역</small>
-            </div>
-          </div>
-        </aside>
-      </section>
+<main class="main">
 
-      <section class="content-grid" aria-label="검색 결과와 실거래 정보">
-        <section class="panel results-panel" aria-labelledby="resultsTitle">
-          <div class="panel-header">
-            <div>
-              <div class="card-kicker">MATCHED HOMES</div>
-              <h2 id="resultsTitle">AI 추천 후보</h2>
-            </div>
-            <div class="status-pill" id="assistantStatus">검색 준비</div>
-          </div>
-          <div class="results-list" id="resultsList"></div>
-        </section>
-
-        <section class="panel filters-panel" aria-labelledby="filtersTitle">
-          <div class="panel-header compact">
-            <div>
-              <div class="card-kicker">FILTERS</div>
-              <h2 id="filtersTitle">지역 필터</h2>
-            </div>
-          </div>
-          <div class="district-grid" id="districtGrid"></div>
-          <div class="range-card">
-            <label for="budgetRange">최대 예산</label>
-            <input id="budgetRange" type="range" min="8" max="35" step="1" value="18" />
-            <div><span id="budgetLabel">18억</span> 이하</div>
-          </div>
-        </section>
-      </section>
-
-      <section class="table-grid">
-        <section class="panel" id="transactions" aria-labelledby="transactionsTitle">
-          <div class="panel-header">
-            <div>
-              <div class="card-kicker">TODAY</div>
-              <h2 id="transactionsTitle">오늘의 실거래</h2>
-            </div>
-            <button class="icon-button" type="button" id="sortDealsButton" aria-label="거래금액순 정렬" title="거래금액순 정렬">
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M4 7h12" />
-                <path d="M4 12h9" />
-                <path d="M4 17h5" />
-                <path d="M18 6v12" />
-                <path d="m15 15 3 3 3-3" />
-              </svg>
-            </button>
-          </div>
-          <div class="transaction-list" id="transactionList"></div>
-        </section>
-
-        <section class="panel" id="records" aria-labelledby="recordsTitle">
-          <div class="panel-header">
-            <div>
-              <div class="card-kicker">NEW HIGHS</div>
-              <h2 id="recordsTitle">오늘의 신고가</h2>
-            </div>
-          </div>
-          <div class="record-list" id="recordList"></div>
-        </section>
-      </section>
-
-      <!-- 지역별 거래 활성도 -->
-      <section class="panel district-activity-section" aria-labelledby="activityTitle">
-        <div class="panel-header">
-          <div>
-            <div class="card-kicker">DISTRICT ACTIVITY</div>
-            <h2 id="activityTitle">지역별 거래 활성도</h2>
-            <p class="panel-desc">최근 1개월 데이터 기반 구별 핫스팟 현황</p>
-          </div>
-          <div class="activity-legend">
-            <span><span class="legend-dot hot"></span>활발</span>
-            <span><span class="legend-dot mid"></span>보통</span>
-            <span><span class="legend-dot low"></span>조용</span>
-          </div>
-        </div>
-        <div class="district-activity-grid" id="districtActivityGrid"></div>
-      </section>
-
-      <!-- 구 상세 오버레이 -->
-      <div class="district-detail-overlay" id="districtDetailOverlay" hidden></div>
-
-      <section class="panel permit-panel" id="permits" aria-labelledby="permitsTitle">
-        <div class="panel-header">
-          <div>
-            <div class="card-kicker">PERMIT DEALS</div>
-            <h2 id="permitsTitle">토지거래허가 내역</h2>
-          </div>
-          <div class="status-pill" id="permitDateLabel">로딩 중…</div>
-        </div>
-        <div class="permit-dashboard">
-          <div class="permit-count-card">
-            <div>
-              <span class="permit-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M7 3h10l4 4v14H7z" />
-                  <path d="M17 3v5h4" />
-                  <path d="M3 8h4v13H3z" />
-                  <path d="M10 13h7" />
-                  <path d="M10 17h5" />
-                </svg>
-              </span>
-            </div>
-            <div>
-              <p>오늘 토지거래허가</p>
-              <strong><span id="permitTodayCount">0</span>건</strong>
-            </div>
-          </div>
-          <div class="permit-date-strip" id="permitDateStrip" aria-label="일자별 토지거래허가"></div>
-          <div class="permit-content">
-            <div class="permit-list-panel">
-              <div class="permit-subhead">
-                <div>
-                  <h3 id="permitListTitle">일자별 거래내역</h3>
-                  <p id="permitListMeta">선택한 날짜의 허가 거래입니다.</p>
-                </div>
-                <button class="copy-button" type="button">요약 보기</button>
-              </div>
-              <div class="permit-daily-list" id="permitDailyList"></div>
-            </div>
-            <aside class="permit-complex-panel" id="permitComplexInfo" aria-label="선택한 단지 정보"></aside>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <dialog class="detail-dialog" id="detailDialog" aria-labelledby="detailTitle">
-      <div class="detail-panel">
-        <button class="dialog-close" type="button" id="detailClose" aria-label="상세 닫기" title="상세 닫기">
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M6 6l12 12" />
-            <path d="M18 6 6 18" />
-          </svg>
+  <!-- ① SMART MATCH (맞춤 아파트 찾기) -->
+  <section class="card finder-card top-finder-card" id="finder">
+    <div class="finder-hero">
+      <span class="kicker">SMART MATCH · 맞춤 추천</span>
+      <h2 class="finder-hero-title">몇 가지 질문이면,<br>내게 맞는 아파트를 찾아드려요</h2>
+      <p class="finder-hero-desc">예산·목적·지역·평수·대출까지 단계별로 답하면 추천 점수순으로 정리해 드려요.</p>
+      <div class="finder-hero-actions">
+        <button class="finder-start" type="button" id="finderStartBtn">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          맞춤 아파트 찾기 시작
         </button>
-        <div class="card-kicker" id="detailKicker">TRANSACTION DETAIL</div>
-        <h2 id="detailTitle">거래 상세</h2>
-        <div class="detail-summary" id="detailSummary"></div>
-        <div class="detail-grid" id="detailGrid"></div>
-        <div class="detail-note" id="detailNote"></div>
+        <button class="finder-saved-open" type="button" id="finderSavedBtn">
+          저장한 아파트 <span id="finderSavedCount">0</span>
+        </button>
       </div>
-    </dialog>
+      <div class="finder-hero-steps">자본금 · 목적 · 지역 · 평수 · 출근지 · 연봉 · 대출 …</div>
+    </div>
+  </section>
 
-    <footer class="footer">
-      <span>데모 데이터 기준</span>
-      <span>국토교통부 실거래가 · 서울 열린데이터광장 연동 구조</span>
-      <span>브라우저 로컬 검색</span>
-    </footer>
+  <!-- ① HERO -->
+  <section class="hero" id="heroSearch">
+    <div class="hero-top">
+      <div>
+        <div class="hero-headline">Seoul Estate AI</div>
+        <h1 class="hero-title">오늘 서울 부동산<br>한눈에 파악하기</h1>
+      </div>
+      <span class="hero-date" id="heroDate"></span>
+    </div>
+    <div class="hero-stats">
+      <button class="hstat" type="button" data-metric-nav="deals">
+        <div class="hstat-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div><div class="hstat-val" id="mDeals">0</div><div class="hstat-lbl">최신 실거래</div></div>
+        <span class="hstat-arr">›</span>
+      </button>
+      <button class="hstat" type="button" data-metric-nav="records">
+        <div class="hstat-icon">
+          <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        </div>
+        <div><div class="hstat-val red" id="mRec">0</div><div class="hstat-lbl">신고가</div></div>
+        <span class="hstat-arr">›</span>
+      </button>
+      <button class="hstat" type="button" data-metric-nav="permits">
+        <div class="hstat-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div><div class="hstat-val" id="mPerm">0</div><div class="hstat-lbl">토허구역 허가</div></div>
+        <span class="hstat-arr">›</span>
+      </button>
+    </div>
+  </section>
 
-    <script src="app.js" defer></script>
-  </body>
+  <div class="dashboard-grid">
+    <div class="dashboard-main">
+
+  <!-- ②-1 CANDIDATE WATCHLIST -->
+  <section class="card candidate-card" id="candidateWatch">
+    <div class="sheader">
+      <div>
+        <span class="kicker">MOVE-UP WATCHLIST</span>
+        <h2 class="stitle">갈아타기 후보 실거래</h2>
+        <p class="sdesc" id="candidateDesc">후보 단지에 국토교통부 실거래 자료를 붙여 확인합니다.</p>
+      </div>
+      <div class="candidate-actions">
+        <select class="candidate-select" id="candidateMonths" aria-label="실거래 조회 기간">
+          <option value="12" selected>최근 12개월</option>
+          <option value="36">최근 36개월</option>
+          <option value="60">최근 60개월</option>
+          <option value="120">최근 120개월</option>
+        </select>
+        <button class="tsearch" type="button" id="candidateRefreshBtn">새로고침</button>
+      </div>
+    </div>
+    <div class="candidate-stats" id="candidateStats"></div>
+    <div class="rpills candidate-tabs" id="candidateTabs"></div>
+    <div class="candidate-list" id="candidateList"></div>
+  </section>
+
+  <!-- ③ NEW CLOSINGS -->
+  <section class="card" id="closings">
+    <div class="sheader">
+      <div>
+        <span class="kicker">NEW CLOSINGS</span>
+        <h2 class="stitle">새로 올라온 거래</h2>
+        <p class="sdesc">국토교통부 실거래가 공개시스템 등록 기준</p>
+      </div>
+      <div class="tab-group" id="closingsTabs">
+        <button class="tab on" type="button" data-t="today">오늘</button>
+        <button class="tab" type="button" data-t="yesterday">어제</button>
+        <button class="tab" type="button" data-t="week">이번 주</button>
+      </div>
+    </div>
+    <div class="rpills" id="regionPills"></div>
+    <div class="deal-list" id="dealList"></div>
+    <button class="morebtn" type="button" id="regMoreBtn" style="display:none">더보기 ↓</button>
+  </section>
+
+  <!-- ⑥ HISTORY -->
+  <section class="card">
+    <div class="sheader">
+      <div>
+        <span class="kicker">HISTORY</span>
+        <h2 class="stitle">전체 실거래 누적 내역</h2>
+        <p class="sdesc">날짜별로 쌓인 실거래 데이터 — 클릭하면 펼쳐져요</p>
+      </div>
+      <button class="morebtn" type="button" id="historyMoreBtn" style="width:auto;margin:0;padding:6px 14px;font-size:12px">전체 날짜 보기</button>
+    </div>
+    <div class="hist-list" id="transactionHistory"></div>
+  </section>
+
+    </div>
+    <aside class="dashboard-side" aria-label="부동산 인사이트 요약">
+
+  <!-- ⑤ NEW HIGHS + ASKING -->
+  <div class="two">
+    <section class="card" id="records">
+      <div class="sheader">
+        <div>
+          <span class="kicker">NEW HIGHS</span>
+          <h2 class="stitle">신고가</h2>
+        </div>
+        <button class="morebtn" type="button" style="width:auto;margin:0;padding:6px 14px;font-size:12px" data-more-type="records">전체 보기 →</button>
+      </div>
+      <div class="rec-list" id="recordList"></div>
+    </section>
+    <section class="card">
+      <div class="sheader">
+        <div>
+          <span class="kicker">ASKING PRICE SIGNAL</span>
+          <h2 class="stitle">호가 흐름</h2>
+        </div>
+        <span class="pill">베타</span>
+      </div>
+      <div class="ask-sum">
+        <div class="ask-stat"><div class="asval dn">81%</div><div class="aslbl">호가인하</div></div>
+        <div class="ask-stat"><div class="asval up">19%</div><div class="aslbl">호가인상</div></div>
+        <div class="ask-stat"><div class="asval neg">-4,742</div><div class="aslbl">매물순증감</div></div>
+      </div>
+      <div class="ask-list" id="askList"></div>
+    </section>
+  </div>
+
+  <!-- ③ DISTRICT ACTIVITY -->
+  <section class="card" id="districts">
+    <div class="sheader">
+      <div>
+        <span class="kicker">DISTRICT ACTIVITY</span>
+        <h2 class="stitle">지역별 거래 활성도</h2>
+        <p class="sdesc">최근 1개월 데이터 기반 구별 핫스팟 현황</p>
+      </div>
+      <div class="legend">
+        <span><span class="ldot" style="background:var(--accent)"></span>활발</span>
+        <span><span class="ldot" style="background:var(--bg2);border:1px solid var(--div)"></span>보통</span>
+        <span><span class="ldot" style="background:var(--bg2);opacity:.5"></span>조용</span>
+      </div>
+    </div>
+    <div class="dact-grid" id="distGrid"></div>
+  </section>
+
+  <!-- ⑦ PERMITS PREVIEW -->
+  <section class="card" id="permits" style="cursor:pointer" role="button" tabindex="0">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <span class="kicker">PERMIT DEALS</span>
+        <h2 class="stitle">토지거래허가 내역</h2>
+        <p class="sdesc" id="permitDateLabel" style="margin-top:4px">로딩 중…</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div class="hstat-val" id="permitTodayCount">0</div>
+          <div style="font-size:11.5px;color:var(--t3);margin-top:2px">토허 허가</div>
+        </div>
+        <button class="tsearch" type="button" id="permitPreviewBtn">전체 보기 →</button>
+      </div>
+    </div>
+    <div id="permitTagsRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--div)"></div>
+  </section>
+
+    </aside>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <span>국토교통부 실거래가 공개시스템 기준</span>
+  <span>서울 25개 자치구 아파트 실거래 데이터</span>
+  <span>Seoul Estate AI</span>
+</footer>
+
+<!-- 자치구 팝업 -->
+<div class="gu-popup-overlay" id="guOverlay"></div>
+<div class="gu-popup" id="guPopup" style="display:none">
+  <div class="gu-popup-header">
+    <span class="gu-popup-title">관심 지역 선택</span>
+    <button class="gu-popup-close" id="guPopupClose" type="button">×</button>
+  </div>
+  <div class="gu-dropdown-grid" id="guGrid"></div>
+  <div class="gu-clear" id="guClear">선택 해제</div>
+</div>
+
+<!-- 오버레이 (구 상세 / 신고가 / 실거래) -->
+<div class="district-detail-overlay" id="districtDetailOverlay" hidden></div>
+
+<!-- 거래 상세 다이얼로그 -->
+<dialog class="detail-dialog" id="detailDialog" aria-labelledby="detailTitle">
+  <div class="detail-panel">
+    <button class="dialog-close" type="button" id="detailClose" aria-label="상세 닫기">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+    </button>
+    <div class="kicker" id="detailKicker">TRANSACTION DETAIL</div>
+    <h2 id="detailTitle">거래 상세</h2>
+    <div class="detail-summary" id="detailSummary"></div>
+    <div class="detail-grid" id="detailGrid"></div>
+    <div class="detail-note" id="detailNote"></div>
+  </div>
+</dialog>
+
+<!-- 카카오 지도 SDK (추천 상세 지도용) -->
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0e2f4ccb28a9eabf459441567878a572&libraries=services&autoload=false"></script>
+<script src="app.js" defer></script>
+</body>
 </html>

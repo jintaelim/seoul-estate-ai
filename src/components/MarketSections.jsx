@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import DailyLedger from "./DailyLedger";
 import { SegmentedControl } from "@seed-design/react";
-import { askingSignals } from "../data/sampleTransactions";
 import { formatPrice, isRecord, latestDate, pricePerPyeong, recordRate } from "../utils";
 import { DealRow, Empty, SectionHeader } from "./Common";
 import { SeedSelect } from "./SeedFormControls";
@@ -71,37 +72,45 @@ function periodWindow(period, latest) {
   return { start: "", end: "" };
 }
 
-export function NewClosings({ transactions, onSelect }) {
-  const [period, setPeriod] = useState("week");
-  const [district, setDistrict] = useState("전체");
-  const dates = [...new Set(transactions.map((item) => item.dealDate))].sort().reverse();
-  const window = periodWindow(period, dates[0]);
-  const base = period === "all"
-    ? transactions
-    : transactions.filter((item) => item.dealDate >= window.start && item.dealDate <= window.end);
-  const districts = ["전체", ...new Set(base.map((item) => item.district))];
-  const visible = (district === "전체" ? base : base.filter((item) => item.district === district)).slice().sort((a, b) => pricePerPyeong(b) - pricePerPyeong(a));
-  const recordCount = visible.filter(isRecord).length;
-  const periodLabel = TRANSACTION_PERIODS.find(([key]) => key === period)?.[1] ?? "기간";
-  const rangeLabel = period === "all"
-    ? `${dates.at(-1) ?? "-"}~${dates[0] ?? "-"}`
-    : window.start === window.end
-      ? window.start || "-"
-      : `${window.start}~${window.end}`;
-  return (
-    <section className="card" id="closings">
-      <SectionHeader
-        eyebrow="LATEST CONTRACTS"
-        title={period === "latest" ? "최신 계약일 실거래" : `${periodLabel} 실거래`}
-        description={`${rangeLabel} 계약일 기준 · ${periodLabel} · 평당가 높은 순`}
-        action={<SegmentedControl.Root className="seed-segmented transaction-period-control" size="medium" value={period} onValueChange={(value) => { setPeriod(value); setDistrict("전체"); }}><SegmentedControl.Indicator />{TRANSACTION_PERIODS.map(([key, label]) => <SegmentedControl.Item value={key} key={key}><SegmentedControl.ItemHiddenInput />{label}</SegmentedControl.Item>)}</SegmentedControl.Root>}
-      />
-      <div className="section-data-bar"><span><b>{visible.length.toLocaleString("ko-KR")}</b>건 조회</span><span>조회 기간 <b>{periodLabel}</b></span><span>신고가 <b className="red-text">{recordCount}</b>건</span><span>최고 거래가 <b>{visible.length ? formatPrice(Math.max(...visible.map((item) => item.price))) : "-"}</b></span></div>
-      <div className="rpills">{districts.map((name) => <button className={`rpill ${district === name ? "on" : ""}`} type="button" key={name} onClick={() => setDistrict(name)}>{name}</button>)}</div>
-      <div className="deal-list"><div className="deal-list-head"><span>지역</span><span>단지 / 위치</span><span>면적</span><span>거래금액</span><span>계약일</span></div>{visible.length ? visible.slice(0, 12).map((item) => <DealRow item={item} onSelect={onSelect} key={item.id} />) : <Empty>해당 기간에 집계된 거래가 없습니다.</Empty>}</div>
-    </section>
-  );
+function DailyVolumeTrend({ transactions, district, range, coverage }) {
+  const [page, setPage] = useState(0);
+  const [tooltip, setTooltip] = useState(null);
+  const start = range.start && range.start > coverage.start ? range.start : coverage.start;
+  const end = range.end && range.end < coverage.end ? range.end : coverage.end;
+  const dates = useMemo(() => {
+    if (!start || !end || start > end) return [];
+    const result = [];
+    for (let date = start; date <= end; date = shiftDateKey(date, 1)) result.push(date);
+    return result;
+  }, [start, end]);
+  const counts = useMemo(() => {
+    const result = new Map();
+    for (const item of transactions) {
+      if (district === "전체" || item.district === district) result.set(item.dealDate, (result.get(item.dealDate) || 0) + 1);
+    }
+    return result;
+  }, [transactions, district]);
+  const lastIndex = dates.length - page * 30;
+  const visibleDates = dates.slice(Math.max(0, lastIndex - 30), lastIndex);
+  const bars = visibleDates.map(date => ({ date, count: counts.get(date) || 0 }));
+  const max = Math.max(1, ...bars.map(item => item.count));
+  const [selectedDate, setSelectedDate] = useState("");
+  const selected = bars.find(item => item.date === selectedDate) || bars.at(-1);
+  const showTooltip = (event, date, count) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltip({ date, count, left: Math.min(window.innerWidth - 76, Math.max(76, rect.left + rect.width / 2)), top: rect.top - 8 });
+  };
+
+  return <section className="volume-daily-trend" aria-label="계약일별 거래량 추이">
+    <header className="volume-daily-head"><div><h3>일별 거래량 추이</h3><p>{district === "전체" ? "서울 전체" : district} · 계약일 기준 · {bars[0]?.date || "-"}~{bars.at(-1)?.date || "-"}</p></div><div className="volume-daily-controls"><button type="button" onClick={() => { setPage(value => value + 1); setSelectedDate(""); }} disabled={lastIndex <= 30} aria-label="이전 30일">이전</button><button type="button" onClick={() => { setPage(value => value - 1); setSelectedDate(""); }} disabled={page === 0} aria-label="다음 30일">다음</button></div></header>
+    {bars.length ? <><div className="volume-daily-selected" aria-live="polite"><span>{selected?.date} 계약</span><strong>{selected?.count.toLocaleString("ko-KR")}건</strong></div><div className="volume-daily-scroll" onScroll={() => setTooltip(null)}><div className="volume-daily-bars" style={{ "--volume-days": bars.length }}>
+      {bars.map(({ date, count }) => <button type="button" className={`volume-daily-day ${selected?.date === date ? "selected" : ""}`} key={date} onClick={() => setSelectedDate(date)} onMouseEnter={event => showTooltip(event, date, count)} onMouseLeave={() => setTooltip(null)} onFocus={event => showTooltip(event, date, count)} onBlur={() => setTooltip(null)} aria-label={`${date} 계약 ${count}건`} aria-pressed={selected?.date === date}><span className="volume-daily-bar"><i style={{ height: `${count ? Math.max(5, count / max * 100) : 0}%` }} /></span><small>{date.slice(5)}</small></button>)}
+    </div></div><p className="volume-daily-note">신고 지연으로 최근 계약일의 거래 건수는 늘어날 수 있습니다.</p></> : <Empty>선택한 기간에 저장된 실거래 원장이 없습니다.</Empty>}
+    {tooltip && createPortal(<div className="volume-daily-tooltip" role="tooltip" style={{ left: tooltip.left, top: tooltip.top }}><span>{tooltip.date} 계약</span><strong>{tooltip.count.toLocaleString("ko-KR")}건</strong></div>, document.body)}
+  </section>;
 }
+
+export function NewClosings(props) { return <DailyLedger {...props} />; }
 
 export function TransactionVolumeRanking({ transactions, onSelect }) {
   const [period, setPeriod] = useState("thisYear");
@@ -155,6 +164,7 @@ export function TransactionVolumeRanking({ transactions, onSelect }) {
         </SegmentedControl.Root>
       </div>
       <div className="section-data-bar volume-summary"><span><b>{totalCount.toLocaleString("ko-KR")}</b>건 집계</span><span><b>{ranking.length.toLocaleString("ko-KR")}</b>개 단지</span><span>지역 <b>{district}</b></span><span>계약일 기준</span>{partialYear && <span>수집 범위 <b>{coverageLabel}</b></span>}</div>
+      <DailyVolumeTrend key={`${period}|${district}`} transactions={filtered} district={district} range={window} coverage={{ start: dataDates[0], end: dataDates.at(-1) }} />
       <div className="volume-ranking-list" aria-live="polite">
         {topRows.length ? topRows.map((item, index) => (
           <button className="volume-ranking-row" type="button" key={`${item.district}|${item.dong}|${item.complex}`} onClick={() => onSelect?.(item.latest)} aria-label={`${item.complex}, ${item.count}건 거래`}>
@@ -180,15 +190,7 @@ export function DistrictActivity({ transactions, onDistrict }) {
   return <section className="card" id="districts"><SectionHeader eyebrow="DISTRICT ACTIVITY" title="지역별 거래 활성도" description="현재 조회된 원장 기준 구별 거래 건수" /><div className="dact-grid">{activity.map((item) => <button className={`dcell ${item.level}`} type="button" key={item.district} onClick={() => onDistrict(item.district)}><span className="dcnm">{item.district}</span><span className="dccnt">{item.count}건</span></button>)}</div></section>;
 }
 
-export function RecordsAndSignals({ transactions, onSelect }) {
-  const records = transactions.filter(isRecord).sort((a, b) => recordRate(b) - recordRate(a)).slice(0, 5);
-  return (
-    <div className="two">
-      <section className="card" id="records"><SectionHeader eyebrow="NEW HIGHS" title="신고가" /><div className="rec-list">{records.map((item, index) => <button className="rec-item" type="button" key={item.id} onClick={() => onSelect(item)}><span className="rank">{index + 1}</span><span><span className="rnm">{item.complex}</span><span className="rdt">{item.district} {item.dong} · {item.area.toFixed(0)}㎡</span></span><span className="rprice"><span className="rpval">{formatPrice(item.price)}</span><span className="rpchg">+{recordRate(item).toFixed(1)}%</span></span></button>)}</div></section>
-      <section className="card"><SectionHeader eyebrow="ASKING PRICE SIGNAL" title="호가 흐름" action={<span className="pill">베타</span>} /><div className="ask-sum"><div className="ask-stat"><strong className="asval dn">81%</strong><span className="aslbl">호가인하</span></div><div className="ask-stat"><strong className="asval up">19%</strong><span className="aslbl">호가인상</span></div><div className="ask-stat"><strong className="asval neg">-4,742</strong><span className="aslbl">매물순증감</span></div></div><div className="ask-list">{askingSignals.map((item) => <div className="ask-item" key={item.complex}><span><span className="acplx">{item.complex}</span><span className="acgu">{item.district}</span></span><strong className={`achg ${item.change > 0 ? "up" : "dn"}`}>{item.change > 0 ? "+" : ""}{item.change}%</strong></div>)}</div></section>
-    </div>
-  );
-}
+export function RecordsAndSignals(props) { return <DailyLedger {...props} recordsOnly />; }
 
 export function History({ transactions, onSelect }) {
   const [openDate, setOpenDate] = useState(latestDate(transactions));
@@ -201,6 +203,10 @@ export function History({ transactions, onSelect }) {
 }
 
 export function PermitPreview({ transactions, onSelect }) {
+  return <section className="card"><SectionHeader eyebrow="LAND PERMITS" title="토지거래허가 내역" /><Empty>허가 원장 공급원이 아직 연결되지 않았습니다. 실거래 신고 건수는 토지거래허가 건수와 다르므로 별도로 집계합니다.</Empty></section>;
+}
+
+export function VerifiedPermitLedger({ transactions, onSelect }) {
   const permits = transactions.filter((item) => item.permitZone);
   const zones = [...new Set(permits.map((item) => item.permitZone))];
   const latestPermitDate = latestDate(permits);

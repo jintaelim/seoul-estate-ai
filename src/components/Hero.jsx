@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { ActionButton } from "@seed-design/react";
 import { latestDate } from "../utils";
+import { SEOUL_DISTRICTS } from "../data/districts";
 
 export default function Hero({ transactions, onBudgetSearch }) {
   const [form, setForm] = useState({ capital: "", loan: "", district: "전체" });
-  const districts = useMemo(() => ["전체", ...new Set(transactions.map((item) => item.district))], [transactions]);
+  const districts = useMemo(() => ["전체", ...SEOUL_DISTRICTS], []);
   const date = latestDate(transactions);
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
@@ -13,7 +14,7 @@ export default function Hero({ transactions, onBudgetSearch }) {
       <div className="hero-top">
         <div>
           <h1 className="hero-title">서울 아파트,<br /><em>움직인 가격</em>부터 봅니다.</h1>
-          <p className="hero-lead">실거래 원장과 토지거래허가 내역을 한 흐름으로 확인하고<br className="desktop-only" /> 내 예산에 맞는 다음 단지를 빠르게 좁혀보세요.</p>
+          <p className="hero-lead">서울 아파트의 실제 계약 가격과 거래 흐름을 확인하고<br className="desktop-only" /> 내 예산에 맞는 다음 단지를 찾아보세요.</p>
         </div>
         <div className="hero-asof"><span>DATA AS OF</span><strong>{date || "불러오는 중"}</strong><small>국토교통부 신고 기준</small></div>
       </div>

@@ -65,6 +65,25 @@ export async function persistTransactions(items) {
   return { persisted: true, apartments: apartments.length, transactions: transactions.length };
 }
 
+export async function persistRentTransactions(items) {
+  if (!storageConfigured || !items.length) return { persisted: false, reason: "storage-not-configured" };
+  const rows = items.map((item) => ({
+    id: item.id.slice(0, 240),
+    apartment_id: `${item.district}-${item.complex}`.slice(0, 180),
+    district: item.district,
+    dong: item.dong,
+    complex: item.complex,
+    area: item.area,
+    floor: item.floor,
+    deposit: item.deposit,
+    monthly_rent: item.monthlyRent,
+    deal_date: item.dealDate,
+    source: "molit-rent",
+  }));
+  await supabaseUpsert("rent_transactions", rows, "id");
+  return { persisted: true, transactions: rows.length };
+}
+
 async function supabaseUpsert(table, rows, onConflict) {
   for (let index = 0; index < rows.length; index += 500) {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${onConflict}`, {

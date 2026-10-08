@@ -1,5 +1,5 @@
 import { Badge } from "@seed-design/react";
-import { formatPrice, isRecord } from "../utils";
+import { formatHousingArea, formatPrice, isRecord } from "../utils";
 
 export function SectionHeader({ eyebrow, title, description, action }) {
   return (
@@ -27,7 +27,7 @@ export function DealRow({ item, onSelect }) {
         </span>
         <span className="dinfo">{item.dong} · {item.floor}층</span>
       </span>
-      <span className="darea">{item.area.toFixed(0)}㎡</span>
+      <span className="darea">{formatHousingArea(item)}</span>
       <span className={`dprice ${isRecord(item) ? "hi" : ""}`}>{formatPrice(item.price)}</span>
       <span className="ddate">{Number(month)}/{Number(day)}</span>
     </button>

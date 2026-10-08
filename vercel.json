@@ -3,14 +3,25 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/transactions.js": {
+    "api/cron-ingest.js": {
+      "maxDuration": 300
+    },
+    "api/market-summary.js": {
       "maxDuration": 60
     }
   },
-  "crons": [{ "path": "/api/cron-ingest", "schedule": "0 2 * * *" }],
+  "crons": [
+    { "path": "/api/cron-ingest?dataset=transactions", "schedule": "0 2 * * *" },
+    { "path": "/api/cron-ingest?dataset=land-permits", "schedule": "15 2 * * *" },
+    { "path": "/api/cron-ingest?dataset=rent-transactions", "schedule": "30 2 * * *" },
+    { "path": "/api/cron-ingest?dataset=home-themes", "schedule": "45 2 * * *" },
+    { "path": "/api/cron-ingest?dataset=apartment-metadata", "schedule": "0 3 * * *" }
+  ],
   "rewrites": [
     { "source": "/transactions", "destination": "/index.html" },
     { "source": "/search", "destination": "/index.html" },
+    { "source": "/purchase", "destination": "/index.html" },
+    { "source": "/rent", "destination": "/index.html" },
     { "source": "/records", "destination": "/index.html" },
     { "source": "/permits", "destination": "/index.html" },
     { "source": "/watchlist", "destination": "/index.html" }

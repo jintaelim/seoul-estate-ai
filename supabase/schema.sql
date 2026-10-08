@@ -25,7 +25,7 @@ create table if not exists public.transactions (
   district text not null,
   dong text,
   complex text not null,
-  area numeric(8,2) not null,
+  area numeric(9,4) not null,
   floor integer,
   price integer not null,
   deal_date date not null,
@@ -38,13 +38,17 @@ create table if not exists public.transactions (
 create index if not exists transactions_complex_area_date_idx on public.transactions (complex, area, deal_date desc);
 create index if not exists transactions_district_date_idx on public.transactions (district, deal_date desc);
 
+-- Preserve the precision published by MOLIT (for example 84.354㎡).
+-- This also upgrades projects that ran an earlier version of this schema.
+alter table public.transactions alter column area type numeric(9,4);
+
 create table if not exists public.rent_transactions (
   id text primary key,
   apartment_id text references public.apartments(id) on delete set null,
   district text not null,
   dong text,
   complex text not null,
-  area numeric(8,2) not null,
+  area numeric(9,4) not null,
   floor integer,
   deposit integer not null,
   monthly_rent integer not null default 0,
@@ -52,6 +56,8 @@ create table if not exists public.rent_transactions (
   source text not null default 'molit-rent',
   fetched_at timestamptz not null default now()
 );
+
+alter table public.rent_transactions alter column area type numeric(9,4);
 
 create table if not exists public.saved_apartments (
   user_id uuid not null references auth.users(id) on delete cascade,

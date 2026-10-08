@@ -6,6 +6,8 @@ import App from "./App";
 import "../styles.css";
 import "./react.css";
 import "./seed-theme.css";
+import "./layout-fixes.css";
+import "./mobile.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

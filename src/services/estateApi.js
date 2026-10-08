@@ -1,42 +1,81 @@
-const CACHE_KEY = "seoul_estate_react_v1";
-const CACHE_TTL = 60 * 60 * 1000;
-// 전체 거래 원장은 Supabase에 보관합니다. 브라우저에는 오프라인 fallback용
-// 최신 일부만 저장해 localStorage 용량을 안정적으로 제한합니다.
-const CACHE_MAX_ROWS = 300;
-const CACHE_MAX_BYTES = 350_000;
-
-export function readTransactionCache() {
-  try {
-    const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
-    if (!cached || Date.now() - cached.savedAt >= CACHE_TTL || !Array.isArray(cached.data)) return null;
-    const trimmed = cached.data.slice(0, CACHE_MAX_ROWS);
-    // 예전 버전이 저장한 대용량 캐시를 다음 성공 시도 전에 정리합니다.
-    if (cached.data.length > CACHE_MAX_ROWS) {
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data: trimmed, savedAt: cached.savedAt })); } catch { try { localStorage.removeItem(CACHE_KEY); } catch {} }
-    }
-    return trimmed;
-  } catch {
-    return null;
-  }
+const responses = new Map();
+async function readSaved(url, signal) {
+  const cacheKey = url.replace(/[?&]refresh=1/, "");
+  const cached = responses.get(cacheKey);
+  const response = await fetch(url, { cache: "no-cache", signal,
+    headers: cached?.etag ? { "If-None-Match": cached.etag } : {} });
+  if (response.status === 304 && cached) return cached.payload;
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || `데이터 API ${response.status}`);
+  responses.set(cacheKey, { payload, etag: response.headers?.get("etag") });
+  if (responses.size > 32) responses.delete(responses.keys().next().value);
+  return payload;
 }
 
-export async function fetchTransactions() {
-  const response = await fetch("/api/transactions", { cache: "no-store" });
-  if (!response.ok) throw new Error(`실거래 API ${response.status}`);
-  const payload = await response.json();
-  if (!payload.data?.length) throw new Error(payload.error || "실거래 데이터가 비어 있습니다.");
-  // 전체 원장(수천 건)은 브라우저 localStorage 한도를 넘을 수 있습니다.
-  // 화면에는 전체 응답을 그대로 반환하되, 오프라인 fallback용 최근 일부만 저장합니다.
-  try {
-    const cachePayload = { data: payload.data.slice(0, CACHE_MAX_ROWS), savedAt: Date.now() };
-    const serialized = JSON.stringify(cachePayload);
-    if (serialized.length <= CACHE_MAX_BYTES) localStorage.setItem(CACHE_KEY, serialized);
-    else localStorage.removeItem(CACHE_KEY);
-  } catch {
-    // 저장 공간이 부족해도 API 응답 자체는 성공으로 처리합니다.
-    try { localStorage.removeItem(CACHE_KEY); } catch {}
+export async function fetchTransactions(signal, refresh = false) {
+  if (refresh) {
+    const response = await fetch("/api/refresh?dataset=transactions", { method: "POST", cache: "no-store", signal });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `원장 수집 ${response.status}`);
+  }
+  const payload = await readSaved(`/api/transactions?full=1${refresh ? "&refresh=1" : ""}`, signal);
+  if (!Array.isArray(payload.data)) throw new Error("실거래 응답 형식이 올바르지 않습니다.");
+  if (payload.count !== payload.data.length) throw new Error("실거래 전체 건수와 응답 원장이 일치하지 않습니다.");
+  return payload;
+}
+
+export async function fetchApartmentCatalog(signal, refresh = false) {
+  const payload = await readSaved(`/api/apartment-catalog${refresh ? "?refresh=1" : ""}`, signal);
+  if (!Array.isArray(payload.data) || payload.count !== payload.data.length) throw new Error("단지 검색 목록의 건수가 일치하지 않습니다.");
+  return payload;
+}
+
+export async function searchApartments(filters, page = 1, signal) {
+  const params = new URLSearchParams({
+    keyword: filters.keyword || "", district: filters.district || "전체",
+    minPrice: String(Number(filters.min || 0) * 10000), maxPrice: String(Number(filters.max || 0) * 10000),
+    minArea: filters.area || "0", minBuilt: filters.built === "before2010" ? "0" : (filters.built || "0"),
+    builtBefore: filters.built === "before2010" ? "2010" : "0", minHouseholds: filters.households || "0", minRooms: filters.rooms || "0", far: filters.far || "0", theme: filters.theme || "all",
+    sort: filters.sort || "latest", page: String(page), limit: "20",
+  });
+  const payload = await readSaved(`/api/apartment-search?${params}`, signal);
+  if (!Array.isArray(payload.data) || payload.count !== payload.data.length) throw new Error("아파트 검색 결과의 건수가 일치하지 않습니다.");
+  return payload;
+}
+
+export async function fetchLatestTransactions(signal) {
+  const summary = await readSaved("/api/market-summary?dataset=transactions", signal);
+  const latest = summary.groups.reduce((date, row) => row.date > date ? row.date : date, "");
+  if (!latest) return { ...summary, data: [], count: 0, latestDealDate: "" };
+  const expected = summary.groups.filter(row => row.date === latest).reduce((sum, row) => sum + row.count, 0);
+  const data = [];
+  let page = 1, payload;
+  do {
+    payload = await readSaved(`/api/transactions?date=${latest}&page=${page++}&limit=200`, signal);
+    data.push(...payload.data);
+  } while (payload.hasMore);
+  if (data.length !== expected) throw new Error("최신 계약일 집계와 거래 원장이 일치하지 않습니다.");
+  return { ...summary, data, count: data.length, latestDealDate: latest };
+}
+
+export async function fetchHomeThemes(signal) {
+  const payload = await readSaved("/api/market-summary?view=home-themes", signal);
+  if (!payload?.themes || !Array.isArray(payload.themes.active) || !Array.isArray(payload.themes.premium) || !Array.isArray(payload.themes.rentDemand)) {
+    throw new Error("홈 테마 데이터 형식이 올바르지 않습니다.");
   }
   return payload;
+}
+
+export async function fetchComplexTransactions({ district, dong, complex }, signal) {
+  const params = new URLSearchParams({ district, dong, complex, limit: "200", page: "1" });
+  const data = [];
+  let page = 1, payload;
+  do {
+    params.set("page", String(page++));
+    payload = await readSaved(`/api/transactions?${params}`, signal);
+    data.push(...payload.data);
+  } while (payload.hasMore);
+  return data;
 }
 
 export async function fetchCandidates(months, signal) {
@@ -55,12 +94,26 @@ export async function fetchApartmentMeta(query, signal) {
 }
 
 export async function fetchRentTransactions({ district, dong, complex, months = 24 }, signal) {
-  const params = new URLSearchParams({ district, complex, months: String(months) });
+  const cutoff = new Date();
+  cutoff.setDate(1);
+  cutoff.setMonth(cutoff.getMonth() - Math.max(0, Number(months) - 1));
+  const from = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, "0")}-01`;
+  const params = new URLSearchParams({ district, complex, from, limit: "200", page: "1" });
   if (dong) params.set("dong", dong);
-  const response = await fetch(`/api/rent-transactions?${params}`, { signal });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `전월세 API ${response.status}`);
-  return payload;
+  const data = [];
+  let page = 1, payload;
+  do {
+    params.set("page", String(page++));
+    payload = await readSaved(`/api/rent-transactions?${params}`, signal);
+    if (!Array.isArray(payload.data) || payload.count !== payload.data.length) throw new Error("전월세 원장 응답 건수가 일치하지 않습니다.");
+    data.push(...payload.data);
+  } while (payload.hasMore);
+  if (data.length !== payload.totalCount) throw new Error("전월세 원장 일부 내역이 누락되었습니다.");
+  return { ...payload, data, count: data.length, months: Number(months) };
+}
+
+export function fetchRentSummary(signal, refresh = false) {
+  return readSaved(`/api/market-summary?dataset=rent-transactions${refresh ? "&refresh=1" : ""}`, signal);
 }
 
 export async function fetchApartmentBasic(query, signal) {
@@ -68,4 +121,31 @@ export async function fetchApartmentBasic(query, signal) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `단지 기본정보 API ${response.status}`);
   return payload;
+}
+
+export async function fetchLandPermits(signal, refresh = false) {
+  const payload = await readSaved(`/api/land-permits?full=1${refresh ? "&refresh=1" : ""}`, signal);
+  if (!Array.isArray(payload.data) || payload.count !== payload.data.length) throw new Error("토지거래허가 응답 형식이 올바르지 않습니다.");
+  return payload;
+}
+
+export async function fetchPermitDay({ date, district, status, refresh }, signal) {
+  const summary = await readSaved(`/api/market-summary?dataset=land-permits${refresh ? "&refresh=1" : ""}`, signal);
+  const latest = summary.groups.reduce((last, row) => row.date > last ? row.date : last, "");
+  const selected = date || latest;
+  if (!selected) return { ...summary, latestDate: latest, data: [] };
+  const params = new URLSearchParams({ date: selected, limit: "200", page: "1" });
+  if (district !== "전체") params.set("district", district);
+  if (status !== "전체") params.set("status", status);
+  const data = [];
+  let page = 1, payload;
+  do {
+    params.set("page", String(page++));
+    payload = await readSaved(`/api/land-permits?${params}`, signal);
+    if (payload.fetchedAt !== summary.fetchedAt) throw new Error("원장이 갱신되었습니다. 다시 조회해 주세요.");
+    if (!Array.isArray(payload.data) || payload.count !== payload.data.length) throw new Error("허가 원장 응답 건수가 일치하지 않습니다.");
+    data.push(...payload.data);
+  } while (payload.hasMore);
+  if (data.length !== payload.totalCount) throw new Error("허가 원장 일부 내역이 누락되었습니다.");
+  return { ...summary, latestDate: latest, data };
 }

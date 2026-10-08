@@ -1,37 +1,60 @@
-import { useEffect, useState } from "react";
-import { fetchTransactions, readTransactionCache } from "../services/estateApi";
+import { useEffect, useRef, useState } from "react";
+import { fetchTransactions } from "../services/estateApi";
 
-export function useTransactions() {
-  const cached = readTransactionCache();
-  // API 응답 전 샘플 날짜(2026-05-12)를 실거래처럼 노출하지 않습니다.
-  // 이전에 성공적으로 저장한 브라우저 캐시가 있을 때만 즉시 보여줍니다.
-  const [transactions, setTransactions] = useState(cached ?? []);
-  const [source, setSource] = useState(cached ? "cache" : "loading");
+export function useTransactions(enabled = true) {
+  // The server persists the complete ledger. A 300-row browser cache cannot
+  // represent district totals or historical highs.
+  const [transactions, setTransactions] = useState([]);
+  const [source, setSource] = useState("loading");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshedAt, setRefreshedAt] = useState(0);
   const [error, setError] = useState("");
+  const [metadata, setMetadata] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const lastSuccess = useRef(null);
 
   useEffect(() => {
+    if (!enabled) { setLoading(false); return undefined; }
     let active = true;
-    setLoading(true);
+    const controller = new AbortController();
+    const isRefresh = refreshKey > 0 && Boolean(lastSuccess.current);
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setError("");
-    fetchTransactions()
+    fetchTransactions(controller.signal, refreshKey > 0)
       .then((payload) => {
         if (!active) return;
+        lastSuccess.current = payload;
         setTransactions(payload.data);
-        setSource("molit");
+        setMetadata({ ...payload, data: undefined });
+        setSource(payload.source === "stale" ? "cache" : "molit");
+        if (refreshKey > 0 && !payload.warning) setRefreshedAt(Date.now());
+        if (payload.warning) setError(payload.warning);
       })
       .catch((reason) => {
         if (!active) return;
-        // 캐시가 있으면 마지막 성공 원장을 유지하고, 없으면 빈 상태로 둡니다.
-        // 샘플 데이터를 최신 실거래로 오인하지 않도록 합니다.
-        if (!cached) setTransactions([]);
-        setSource(cached ? "cache" : "unavailable");
+        setSource(lastSuccess.current ? "cache" : "unavailable");
         setError(reason.message || "최신 실거래를 불러오지 못했습니다.");
       })
-      .finally(() => active && setLoading(false));
-    return () => { active = false; };
-  }, [refreshKey]);
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+        setRefreshing(false);
+      });
+    return () => { active = false; controller.abort(); };
+  }, [refreshKey, enabled]);
 
-  return { transactions, source, loading, error, retry: () => setRefreshKey((key) => key + 1) };
+  return {
+    transactions,
+    source,
+    loading,
+    refreshing,
+    refreshedAt,
+    error,
+    metadata,
+    retry: () => {
+      if (!loading && !refreshing) setRefreshKey((key) => key + 1);
+    },
+  };
 }

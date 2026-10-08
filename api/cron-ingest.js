@@ -1,13 +1,16 @@
-export const config = { maxDuration: 60 };
+import { timingSafeEqual } from "node:crypto";
+import { ingest } from "./_ingest.js";
+export const config = { maxDuration: 300 };
 
 export default async function handler(req, res) {
   const expected = process.env.CRON_SECRET;
-  const provided = req.headers.authorization?.replace(/^Bearer\s+/i, "");
-  if (expected && provided !== expected) return res.status(401).json({ error: "Unauthorized" });
-  const origin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://${req.headers.host}`;
+  const provided = req.headers.authorization?.replace(/^Bearer\s+/i, "") || "";
+  res.setHeader("Cache-Control", "no-store");
+  if (!expected) return res.status(503).json({ error: "CRON_SECRET 설정이 필요합니다." });
+  if (Buffer.byteLength(expected) !== Buffer.byteLength(provided) || !timingSafeEqual(Buffer.from(expected), Buffer.from(provided))) return res.status(401).json({ error: "Unauthorized" });
+  const dataset = req.query?.dataset || "transactions";
+  if (!["transactions", "rent-transactions", "land-permits", "home-themes", "apartment-metadata"].includes(dataset)) return res.status(400).json({ error: "지원하지 않는 원장입니다." });
   try {
-    const response = await fetch(`${origin}/api/transactions`, { headers: { "x-cron-ingest": "1" } });
-    const payload = await response.json();
-    res.status(response.status).json(payload);
+    res.json(await ingest(dataset));
   } catch (error) { res.status(502).json({ error: error.message }); }
 }

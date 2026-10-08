@@ -7,7 +7,7 @@ export async function fetchMolit(url, options = {}, { attempts = 5, baseDelayMs 
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, { ...options, signal: options.signal ?? AbortSignal.timeout(12000) });
       if (response.ok || !RETRYABLE_STATUS.has(response.status)) return response;
 
       const retryAfter = Number(response.headers.get("retry-after"));

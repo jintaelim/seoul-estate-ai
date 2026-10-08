@@ -7,10 +7,11 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a class="skip-link" href="#mainContent">본문으로 건너뛰기</a>
     <header class="topbar">
       <a class="brand" href="#" aria-label="서울 부동산 데이터 검색비서 홈">
-        <span class="brand-mark"></span>
-        <span>Seoul Estate AI</span>
+        <span class="brand-mark" aria-hidden="true"><i></i></span>
+        <span class="brand-copy"><strong>서울 아파트 데이터</strong><small>SEOUL ESTATE INDEX</small></span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
         <a href="#assistant">AI 검색</a>
@@ -20,18 +21,22 @@
       </nav>
     </header>
 
-    <main class="shell">
+    <main class="shell" id="mainContent">
       <section class="hero-grid" aria-label="서울 부동산 데이터 대시보드">
         <div class="command-card" id="assistant">
-          <div class="card-kicker">ON-DEVICE SEARCH</div>
-          <h1>서울 실거래 안에서 원하는 매물을 바로 찾기</h1>
+          <div class="hero-meta">
+            <div class="card-kicker">SEOUL / APARTMENT DATA</div>
+            <span class="live-status"><i aria-hidden="true"></i> 실거래 데이터 연결</span>
+          </div>
+          <h1>서울 아파트를<br /><em>거래 데이터로 찾다</em></h1>
+          <p class="hero-description">지역과 예산을 말하면 최근 실거래, 신고가, 토지거래허가 정보를 한 번에 비교합니다.</p>
           <form class="search-form" id="assistantForm">
             <label class="sr-only" for="assistantInput">검색 조건</label>
             <textarea
               id="assistantInput"
               name="query"
               rows="3"
-              placeholder="예: 마포구나 성동구에서 12억 이하, 전용 59 이상, 2015년 이후 준공, 최근 6개월 거래가 있는 곳"
+              placeholder="예: 마포·성동, 12억 이하, 전용 59㎡ 이상, 2015년 이후 준공"
             ></textarea>
             <button class="send-button" type="submit" aria-label="검색 실행" title="검색 실행">
               <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -62,22 +67,22 @@
             </svg>
           </div>
           <div>
-            <div class="card-kicker">SEOUL MARKET</div>
+            <div class="card-kicker">MARKET PULSE</div>
             <h2>오늘 감지된 거래 신호</h2>
           </div>
           <div class="metric-stack">
-            <div data-metric-nav="deals" role="button" tabindex="0" aria-label="오늘 실거래 전체 보기">
+            <button type="button" data-metric-nav="deals" aria-label="오늘 실거래 전체 보기">
               <span id="metricDeals">0</span>
-              <small>오늘 실거래</small>
-            </div>
-            <div data-metric-nav="records" role="button" tabindex="0" aria-label="신고가 전체 보기">
+              <small>오늘 실거래 <b aria-hidden="true">↗</b></small>
+            </button>
+            <button type="button" data-metric-nav="records" aria-label="신고가 전체 보기">
               <span id="metricRecords">0</span>
-              <small>신고가</small>
-            </div>
-            <div data-metric-nav="permits" role="button" tabindex="0" aria-label="토허구역 전체 보기">
+              <small>신고가 <b aria-hidden="true">↗</b></small>
+            </button>
+            <button type="button" data-metric-nav="permits" aria-label="토허구역 전체 보기">
               <span id="metricPermits">0</span>
-              <small>토허구역</small>
-            </div>
+              <small>토허구역 <b aria-hidden="true">↗</b></small>
+            </button>
           </div>
         </aside>
       </section>
@@ -86,8 +91,8 @@
         <section class="panel results-panel" aria-labelledby="resultsTitle">
           <div class="panel-header">
             <div>
-              <div class="card-kicker">MATCHED HOMES</div>
-              <h2 id="resultsTitle">AI 추천 후보</h2>
+              <div class="card-kicker">SMART MATCH</div>
+              <h2 id="resultsTitle">조건에 맞는 단지</h2>
             </div>
             <div class="status-pill" id="assistantStatus">검색 준비</div>
           </div>
@@ -97,8 +102,8 @@
         <section class="panel filters-panel" aria-labelledby="filtersTitle">
           <div class="panel-header compact">
             <div>
-              <div class="card-kicker">FILTERS</div>
-              <h2 id="filtersTitle">지역 필터</h2>
+              <div class="card-kicker">REFINE</div>
+              <h2 id="filtersTitle">지역·예산</h2>
             </div>
           </div>
           <div class="district-grid" id="districtGrid"></div>
@@ -114,8 +119,8 @@
         <section class="panel" id="transactions" aria-labelledby="transactionsTitle">
           <div class="panel-header">
             <div>
-              <div class="card-kicker">TODAY</div>
-              <h2 id="transactionsTitle">오늘의 실거래</h2>
+              <div class="card-kicker">LATEST CONTRACTS</div>
+              <h2 id="transactionsTitle">최근 실거래</h2>
             </div>
             <button class="icon-button" type="button" id="sortDealsButton" aria-label="거래금액순 정렬" title="거래금액순 정렬">
               <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -134,7 +139,7 @@
           <div class="panel-header">
             <div>
               <div class="card-kicker">NEW HIGHS</div>
-              <h2 id="recordsTitle">오늘의 신고가</h2>
+              <h2 id="recordsTitle">최근 신고가</h2>
             </div>
           </div>
           <div class="record-list" id="recordList"></div>
@@ -145,9 +150,9 @@
       <section class="panel district-activity-section" aria-labelledby="activityTitle">
         <div class="panel-header">
           <div>
-            <div class="card-kicker">DISTRICT ACTIVITY</div>
+            <div class="card-kicker">DISTRICT PULSE</div>
             <h2 id="activityTitle">지역별 거래 활성도</h2>
-            <p class="panel-desc">최근 1개월 데이터 기반 구별 핫스팟 현황</p>
+            <p class="panel-desc">최근 1개월 계약량을 같은 기준으로 비교합니다.</p>
           </div>
           <div class="activity-legend">
             <span><span class="legend-dot hot"></span>활발</span>
@@ -164,7 +169,7 @@
       <section class="panel permit-panel" id="permits" aria-labelledby="permitsTitle">
         <div class="panel-header">
           <div>
-            <div class="card-kicker">PERMIT DEALS</div>
+            <div class="card-kicker">PERMIT LEDGER</div>
             <h2 id="permitsTitle">토지거래허가 내역</h2>
           </div>
           <div class="status-pill" id="permitDateLabel">로딩 중…</div>

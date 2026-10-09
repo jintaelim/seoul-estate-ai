@@ -1,5 +1,6 @@
-import { getLedger, sendJson } from "./_ledger-store.js";
+import { database, databaseConfigured, getLedger, sendJson } from "./_ledger-store.js";
 import { guardReadRequest, noStore } from "./_http.js";
+import catalogSnapshot from "./_apartment-catalog-snapshot.json" with { type: "json" };
 
 const unitKey = row => `${row.district}|${row.dong}|${row.complex}|${Number(row.area).toFixed(1)}`;
 const DAY = 86400000;
@@ -106,9 +107,21 @@ export function buildApartmentCatalog(sales, rents, permits = { data: [] }) {
   };
 }
 
+export async function readStoredApartmentCatalog() {
+  if (!databaseConfigured()) return catalogSnapshot;
+  try {
+    const rows = await database("estate_ledgers?dataset=eq.transactions&select=metadata");
+    return rows?.[0]?.metadata?.apartmentCatalog || catalogSnapshot;
+  } catch {
+    return catalogSnapshot;
+  }
+}
+
 export default async function handler(req, res) {
   if (!guardReadRequest(req, res)) return;
   try {
+    const stored = await readStoredApartmentCatalog();
+    if (stored?.data) return sendJson(req, res, stored, { browser: 30, edge: 900, stale: 86400 });
     const [sales, rents, permits] = await Promise.all([
       getLedger("transactions", { refresh: req.query?.refresh === "1" }),
       getLedger("rent-transactions", { refresh: req.query?.refresh === "1" }),

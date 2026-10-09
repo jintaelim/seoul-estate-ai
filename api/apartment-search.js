@@ -1,4 +1,4 @@
-import { buildApartmentCatalog } from "./apartment-catalog.js";
+import { buildApartmentCatalog, readStoredApartmentCatalog } from "./apartment-catalog.js";
 import { database, databaseConfigured, getLedger, sendJson } from "./_ledger-store.js";
 import { guardReadRequest, noStore } from "./_http.js";
 
@@ -84,6 +84,9 @@ export function searchApartmentCatalog(rows, query = {}) {
 }
 
 async function localSearch(query) {
+  const stored = await readStoredApartmentCatalog();
+  if (stored?.data) return { ...searchApartmentCatalog(stored.data, query), fetchedAt: stored.fetchedAt,
+    source: "stored-catalog", coverage: stored.coverage };
   const [sales, rents, permits] = await Promise.all([getLedger("transactions"), getLedger("rent-transactions"), getLedger("land-permits")]);
   const catalog = buildApartmentCatalog(sales, rents, permits);
   return { ...searchApartmentCatalog(catalog.data, query), fetchedAt: catalog.fetchedAt,

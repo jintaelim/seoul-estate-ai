@@ -63,12 +63,13 @@ function normalize(row, district) {
   };
 }
 
-export async function collectRents() {
+export async function collectRents({ months = 3 } = {}) {
   if (!SERVICE_KEY) throw new Error("MOLIT_RENT_API_KEY 또는 MOLIT_API_KEY가 설정되지 않았습니다.");
   const startedAt = new Date().toISOString();
-  const months = Array.from({ length: 3 }, (_, index) => yearMonth(index));
+  const monthCount = Math.min(60, Math.max(1, Number(months) || 3));
+  const collectionMonths = Array.from({ length: monthCount }, (_, index) => yearMonth(index));
   const failures = [];
-  const tasks = Object.entries(DISTRICT_CODES).flatMap(([district, code]) => months.map(ym => async () => {
+  const tasks = Object.entries(DISTRICT_CODES).flatMap(([district, code]) => collectionMonths.map(ym => async () => {
     try {
       const occurrences = new Map();
       return (await fetchDistrict(code, ym)).map(raw => {
@@ -88,7 +89,7 @@ export async function collectRents() {
   return {
     data, count: data.length, source: "molit-rent", startedAt, fetchedAt: new Date().toISOString(),
     latestDealDate: data[0]?.dealDate ?? null, dateBasis: "contract", registrationDateAvailable: false,
-    coverage: { months, requested: tasks.length, succeeded: tasks.length, complete: true },
+    coverage: { months: collectionMonths, requested: tasks.length, succeeded: tasks.length, complete: true },
     recordBasis: "국토교통부 아파트 전월세 신고자료 · 계약일 기준 · 해제 거래 제외",
   };
 }

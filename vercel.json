@@ -8,6 +8,18 @@
     },
     "api/market-summary.js": {
       "maxDuration": 60
+    },
+    "api/apartment-search.js": {
+      "maxDuration": 60
+    },
+    "api/apartment-catalog.js": {
+      "maxDuration": 60
+    },
+    "api/transactions.js": {
+      "maxDuration": 60
+    },
+    "api/rent-transactions.js": {
+      "maxDuration": 60
     }
   },
   "crons": [

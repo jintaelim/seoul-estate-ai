@@ -104,6 +104,7 @@ test("client reuses an unchanged full ledger after 304", async t => {
   t.mock.method(globalThis, "fetch", async (url, options) => {
     calls++;
     if (calls === 1) return { ok: true, status: 200, headers: new Headers({ etag: '"abc"' }), json: async () => sample };
+    if (url === "/api/refresh?dataset=transactions") return { ok: true, status: 200, json: async () => ({ status: "success" }) };
     assert.equal(options.headers["If-None-Match"], '"abc"');
     return { status: 304 };
   });

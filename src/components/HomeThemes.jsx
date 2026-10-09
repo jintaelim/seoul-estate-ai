@@ -1,76 +1,86 @@
-import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ActionButton, Badge, Box, Grid, Skeleton, Text } from "@seed-design/react";
 import { formatHousingArea, formatPrice } from "../utils";
 
-const definitions = [
-  { key: "active", marker: "30D", eyebrow: "ACTIVE DISTRICTS", title: "자치구별 거래 1위 단지", description: "최근 30일 매매 계약을 기준으로 각 자치구의 대표 단지를 비교합니다.", tone: "active" },
-  { key: "premium", marker: "₩", eyebrow: "PRICE LEADERS", title: "자치구별 가격 선도 단지", description: "최근 90일, 자치구에서 가장 높은 매매 계약이 확인된 단지입니다.", tone: "premium" },
-  { key: "rentDemand", marker: "J", eyebrow: "JEONSE DEMAND", title: "전세 수요가 모인 단지", description: "최근 90일, 자치구마다 전세 계약이 가장 많이 확인된 단지입니다.", tone: "rent" },
-];
+const signedPrice = value => `${value > 0 ? "+" : ""}${formatPrice(value)}`;
 
-function ThemeCard({ item, definition, onSelect }) {
-  const metric = definition.key === "premium" ? formatPrice(item.price) : item.themeMetric;
-  const secondary = definition.key === "rentDemand" && item.latestJeonse
-    ? `최근 전세 ${formatPrice(item.latestJeonse)}`
-    : `최근 매매 ${formatPrice(item.price)}`;
-  return <button className={`home-theme-card ${definition.tone}`} type="button" onClick={() => onSelect?.(item)}>
-    <span className="home-theme-district">{item.district}</span>
-    <span className="home-theme-marker" aria-hidden="true">{definition.marker}</span>
-    <strong>{item.complex}</strong>
-    <small>{item.dong} · {formatHousingArea(item)}</small>
-    <span className="home-theme-metric"><b>{metric}</b><small>{item.themeNote}</small></span>
-    <span className="home-theme-price">{secondary}<i>상세 보기 →</i></span>
-  </button>;
+function SectionHeading({ code, eyebrow, title, description, meta }) {
+  return <Box as="header" className="signal-section-head">
+    <Badge className="signal-section-code" size="medium" variant="outline" tone="neutral">{code}</Badge>
+    <Box><Text className="signal-eyebrow">{eyebrow}</Text><Text as="h3">{title}</Text><Text as="p">{description}</Text></Box>
+    <Badge className="signal-section-meta" size="medium" variant="weak" tone="neutral">{meta}</Badge>
+  </Box>;
 }
 
-const countOf = (item) => Number.parseInt(String(item.themeMetric || "0").replace(/[^0-9]/g, ""), 10) || 0;
+function LiquidityCard({ item, index, maxCount, onSelect }) {
+  const band = item.priceBandLow === item.priceBandHigh ? formatPrice(item.priceBandLow) : `${formatPrice(item.priceBandLow)}–${formatPrice(item.priceBandHigh)}`;
+  return <Box as="button" className="execution-card" type="button" onClick={() => onSelect?.(item)}>
+    <span className="execution-rank">{String(index + 1).padStart(2, "0")}</span>
+    <span className="execution-place"><Badge size="medium" variant="weak" tone="informative">{item.district}</Badge><small>{item.dong}</small></span>
+    <strong>{item.complex}</strong>
+    <small>{formatHousingArea(item)}</small>
+    <Badge className="execution-level" size="medium" variant="weak" tone={item.executionLevel === "높음" ? "positive" : "warning"}>체결력 {item.executionLevel}</Badge>
+    <span className="execution-bar"><i style={{ width: `${Math.max(10, item.tradeCount90 / Math.max(maxCount, 1) * 100)}%` }} /></span>
+    <dl><div><dt>90일 계약</dt><dd>{item.tradeCount90}건 · {item.tradeDays90}일</dd></div><div><dt>계약 간격</dt><dd>{item.medianIntervalDays || "–"}{item.medianIntervalDays ? "일" : ""}</dd></div><div><dt>실제 체결대</dt><dd>{band}</dd></div></dl>
+  </Box>;
+}
 
-function ActiveDistricts({ items, onSelect }) {
-  const [expanded, setExpanded] = useState(false);
-  const ranked = useMemo(() => [...items].sort((a, b) => countOf(b) - countOf(a)
-    || b.dealDate.localeCompare(a.dealDate)
-    || b.price - a.price), [items]);
-  const maxCount = Math.max(...ranked.map(countOf), 1);
-  const visible = expanded ? ranked : ranked.slice(0, 6);
+function PermitCard({ item, onSelect }) {
+  return <Box as="button" className="permit-signal-card" type="button" onClick={() => onSelect?.(item)}>
+    <span className="permit-signal-date">{item.latestPermitDate}</span>
+    <Badge className="permit-signal-state" size="medium" variant="weak" tone={item.permitStatus === "허가" ? "positive" : "warning"}>{item.permitStatus || "처리"}</Badge>
+    <strong>{item.complex}</strong>
+    <small>{item.district} {item.dong} · {item.permitPurpose || "주거용"}</small>
+    <div><span><b>{item.permitCount}</b>건<small>연결 허가</small></span><span><b>{item.approvedCount}</b>건<small>허가 처리</small></span><span><b>{formatPrice(item.price)}</b><small>연결 매매</small></span></div>
+  </Box>;
+}
 
-  return <div className="active-districts-board">
-    <div className="active-districts-summary">
-      <span><b>{ranked.length}</b>개 자치구</span>
-      <span>단지별 최근 30일 매매 계약</span>
-      <span>계약 건수 순</span>
-    </div>
-    <div className="active-districts-list">
-      {visible.map((item, index) => {
-        const count = countOf(item);
-        return <button className={`active-district-row ${index < 3 ? "leader" : ""}`} type="button" key={`active-${item.district}-${item.complex}`} onClick={() => onSelect?.(item)} aria-label={`${index + 1}위 ${item.district} ${item.complex}, 최근 30일 ${count}건`}>
-          <span className="active-district-rank">{String(index + 1).padStart(2, "0")}</span>
-          <span className="active-district-copy">
-            <span className="active-district-location"><b>{item.district}</b><small>{item.dong}</small></span>
-            <strong>{item.complex}</strong>
-            <small>{formatHousingArea(item)} · 최근 {item.dealDate}</small>
-            <i><em style={{ width: `${Math.max(8, (count / maxCount) * 100)}%` }} /></i>
-          </span>
-          <span className="active-district-stat"><strong>{count}<small>건</small></strong><span>{formatPrice(item.price)}</span></span>
-          <span className="active-district-arrow" aria-hidden="true">→</span>
-        </button>;
-      })}
-    </div>
-    {ranked.length > 6 && <button className="active-districts-more" type="button" onClick={() => setExpanded(value => !value)} aria-expanded={expanded}>{expanded ? "상위 6개만 보기" : `전체 ${ranked.length}개 자치구 보기`}<span aria-hidden="true">{expanded ? "↑" : "↓"}</span></button>}
-  </div>;
+function RentCard({ item, onSelect }) {
+  return <Box as="button" className="rent-defense-card" type="button" onClick={() => onSelect?.(item)}>
+    <span className="rent-defense-place"><Badge size="medium" variant="weak" tone="positive">{item.district}</Badge><small>{item.dong}</small></span>
+    <strong>{item.complex}</strong>
+    <small>{formatHousingArea(item)}</small>
+    <div className="rent-defense-ratio"><b>{item.jeonseRatio}%</b><span>전세가율</span></div>
+    <dl><div><dt>매매</dt><dd>{formatPrice(item.price)}</dd></div><div><dt>전세</dt><dd>{formatPrice(item.latestJeonse)}</dd></div><div><dt>필요 차액</dt><dd>{formatPrice(item.gapAmount)}</dd></div></dl>
+    <span className={`rent-defense-change ${item.depositChange < 0 ? "down" : ""}`}>기간 첫 계약 대비 {signedPrice(item.depositChange)} · {item.rentCount90}건</span>
+  </Box>;
 }
 
 export default function HomeThemes({ payload, loading, error, onSelect }) {
-  if (loading) return <section className="card home-themes home-themes-loading" aria-label="테마별 아파트 불러오는 중"><i /><i /><i /></section>;
-  if (error || !payload) return <section className="card home-themes home-themes-empty"><span>THEME APARTMENTS</span><p>{error || "테마별 단지를 준비하고 있습니다."}</p></section>;
-  return <section className="card home-themes" aria-label="테마별 아파트 단지">
-    <header className="home-themes-intro"><div><span>SEOUL APARTMENT THEMES</span><h2>어떤 기준으로 단지를 볼까요?</h2><p>같은 기간과 기준으로 서울 25개 자치구의 대표 단지를 골랐습니다.</p></div><strong>{payload.latestDealDate}<small>계약일 기준</small></strong></header>
-    <div className="home-theme-groups">{definitions.map(definition => {
-      const items = payload.themes[definition.key] || [];
-      return <section className={`home-theme-group ${definition.key === "active" ? "home-theme-group-active" : ""}`} key={definition.key}>
-        <header><div><span>{definition.eyebrow}</span><h3>{definition.title}</h3><p>{definition.description}</p></div><em>{items.length}개 자치구</em></header>
-        {definition.key === "active" ? <ActiveDistricts items={items} onSelect={onSelect} /> : <div className="home-theme-rail">{items.map(item => <ThemeCard item={item} definition={definition} onSelect={onSelect} key={`${definition.key}-${item.district}-${item.complex}`} />)}</div>}
-      </section>;
-    })}</div>
-    <Link className="home-theme-search-link" to="/search">조건을 직접 정해서 아파트 찾기 <span>→</span></Link>
-  </section>;
+  if (loading) return <Grid as="section" className="card market-signals market-signals-loading" aria-label="계약 분석 불러오는 중"><Skeleton radius="16" /><Skeleton radius="16" /><Skeleton radius="16" /></Grid>;
+  if (error || !payload) return <Box as="section" className="card market-signals market-signals-empty"><Text>CONTRACT SIGNALS</Text><Text as="p">{error || "계약 분석을 준비하고 있습니다."}</Text></Box>;
+  const liquidity = payload.themes.liquidity || [];
+  const permits = payload.themes.permitImpact || [];
+  const rents = payload.themes.rentDefense || [];
+  const maxCount = Math.max(...liquidity.map(item => item.tradeCount90), 1);
+
+  return <Box as="section" className="card market-signals" aria-label="서울 아파트 계약 분석">
+    <Box as="header" className="market-signals-intro">
+      <Box><Text>CONTRACT INTELLIGENCE</Text><Text as="h2">가격보다 먼저, 계약의 힘을 봅니다</Text><Text as="p">같은 면적에서 실제로 반복된 매매와 전세, 서울시 허가 원장을 한 흐름으로 읽었습니다.</Text></Box>
+      <Box as="strong"><Text as="strong">{payload.latestDealDate}</Text><Text>최신 계약일</Text></Box>
+    </Box>
+
+    <Box as="section" className="signal-section execution-section">
+      <SectionHeading code="01" eyebrow="EXECUTION STRENGTH" title="실제로 잘 거래되는 단지" description="동일 단지·동일 전용면적의 90일 계약 수와 계약 간격을 비교합니다." meta={`${liquidity.length}개 단지`} />
+      <Grid className="execution-grid">{liquidity.map((item, index) => <LiquidityCard item={item} index={index} maxCount={maxCount} onSelect={onSelect} key={`liquidity-${item.district}-${item.complex}-${item.area}`} />)}</Grid>
+      <p className="signal-method">체결력은 가격 예측이 아닙니다. 직거래를 제외하고 최근 90일의 계약 횟수와 서로 다른 계약일 간격을 요약한 관찰 지표입니다.</p>
+    </Box>
+
+    <Box as="section" className="signal-section permit-signal-section">
+      <SectionHeading code="02" eyebrow="PERMIT LEDGER" title="토지거래허가와 연결된 단지" description="최근 허가 처리 주소를 실제 아파트 거래 주소와 연결했습니다." meta={`${permits.length}개 단지`} />
+      <Grid className="permit-signal-grid">{permits.map(item => <PermitCard item={item} onSelect={onSelect} key={`permit-${item.district}-${item.complex}`} />)}</Grid>
+      <ActionButton className="signal-inline-link" asChild variant="ghost" size="small"><Link to="/permits">토지거래허가 원장 전체 보기 <span>→</span></Link></ActionButton>
+    </Box>
+
+    <Box as="section" className="signal-section rent-defense-section">
+      <SectionHeading code="03" eyebrow="SALE × JEONSE" title="매매와 전세의 실제 간격" description="같은 단지·같은 면적의 최근 매매와 전세 계약을 맞춰 비교합니다." meta={`${rents.length}개 단지`} />
+      <Grid className="rent-defense-rail">{rents.map(item => <RentCard item={item} onSelect={onSelect} key={`rent-${item.district}-${item.complex}-${item.area}`} />)}</Grid>
+      <p className="signal-method">전세가율과 필요 차액은 표시된 최근 계약끼리 계산한 값이며 현재 매물 가격을 뜻하지 않습니다.</p>
+    </Box>
+
+    <Grid as="footer" className="market-signals-actions">
+      <Link to="/watchlist"><span><b>저장한 단지 변화 확인</b><small>관심 단지의 최근 계약과 주택 조건을 나란히 비교하세요.</small></span><i>→</i></Link>
+      <Link to="/search"><span><b>내 조건으로 아파트 찾기</b><small>예산·면적·준공연도·세대수 조건으로 계약 원장을 검색하세요.</small></span><i>→</i></Link>
+    </Grid>
+  </Box>;
 }

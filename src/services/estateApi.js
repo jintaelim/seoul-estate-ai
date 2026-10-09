@@ -35,7 +35,11 @@ export async function searchApartments(filters, page = 1, signal) {
     keyword: filters.keyword || "", district: filters.district || "전체",
     minPrice: String(Number(filters.min || 0) * 10000), maxPrice: String(Number(filters.max || 0) * 10000),
     minArea: filters.area || "0", minBuilt: filters.built === "before2010" ? "0" : (filters.built || "0"),
-    builtBefore: filters.built === "before2010" ? "2010" : "0", minHouseholds: filters.households || "0", minRooms: filters.rooms || "0", far: filters.far || "0", theme: filters.theme || "all",
+    builtBefore: filters.built === "before2010" ? "2010" : "0", minHouseholds: filters.households || "0", minRooms: filters.rooms || "0", far: filters.far || "0",
+    minTrades: filters.minTrades || "0", maxInterval: filters.maxInterval || "0", maxDaysSince: filters.maxDaysSince || "0",
+    minDiscount: filters.minDiscount || "0", maxGap: String(Number(filters.maxGap || 0) * 10000), minJeonseRatio: filters.minJeonseRatio || "0",
+    minRentTrades: filters.minRentTrades || "0", maxRentAge: filters.maxRentAge || "0", dealType: filters.dealType || "all",
+    quality: filters.quality || "all", permit: filters.permit || "all", theme: filters.theme || "all",
     sort: filters.sort || "latest", page: String(page), limit: "20",
   });
   const payload = await readSaved(`/api/apartment-search?${params}`, signal);
@@ -60,7 +64,7 @@ export async function fetchLatestTransactions(signal) {
 
 export async function fetchHomeThemes(signal) {
   const payload = await readSaved("/api/market-summary?view=home-themes", signal);
-  if (!payload?.themes || !Array.isArray(payload.themes.active) || !Array.isArray(payload.themes.premium) || !Array.isArray(payload.themes.rentDemand)) {
+  if (!payload?.themes || !Array.isArray(payload.themes.liquidity) || !Array.isArray(payload.themes.permitImpact) || !Array.isArray(payload.themes.rentDefense)) {
     throw new Error("홈 테마 데이터 형식이 올바르지 않습니다.");
   }
   return payload;

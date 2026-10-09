@@ -68,8 +68,22 @@ export default function SeoulActivityMap({ transactions = [], onSelect }) {
     const windowDays = period === "all" ? 45 : Math.min(Number(period), 60);
     const dates = latest ? Array.from({ length: windowDays }, (_, index) => shiftDate(latest, index - windowDays + 1)) : [];
     const counts = new Map();
-    scoped.forEach(item => counts.set(item.dealDate, (counts.get(item.dealDate) || 0) + 1));
-    return dates.map(date => ({ date, count: counts.get(date) || 0 }));
+    scoped.forEach(item => {
+      const current = counts.get(item.dealDate) || { count: 0, districts: new Map() };
+      current.count += 1;
+      current.districts.set(item.district, (current.districts.get(item.district) || 0) + 1);
+      counts.set(item.dealDate, current);
+    });
+    return dates.map(date => {
+      const current = counts.get(date);
+      return {
+        date,
+        count: current?.count || 0,
+        districts: [...(current?.districts || new Map()).entries()]
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ko")),
+      };
+    });
   }, [scoped, latest, period]);
   const maxDaily = Math.max(1, ...daily.map(item => item.count));
   const chartWidth = 720; const chartHeight = 180; const chartPad = { left: 52, right: 24, top: 20, bottom: 30 };
@@ -110,8 +124,8 @@ export default function SeoulActivityMap({ transactions = [], onSelect }) {
       </aside>
     </div>
     <div className="activity-chart">
-      <header><div><span>CONTRACT TREND</span><h3>{district === "전체" ? "서울 전체" : district} 계약일별 거래 추이</h3><p>그래프의 날짜를 가리키면 해당 일자의 매매 계약 건수를 확인할 수 있습니다.</p></div><div className="activity-chart-total"><small>기간 합계</small><strong>{scoped.length.toLocaleString("ko-KR")}건</strong></div></header>
-      <div className="activity-chart-wrap" onMouseLeave={() => setActiveDay(null)}>
+      <header><div><span>CONTRACT TREND</span><h3>{district === "전체" ? "서울 전체" : district} 계약일별 거래 추이</h3><p>날짜를 가리키면 일자 합계와 자치구별 매매 계약 건수를 함께 확인할 수 있습니다.</p></div><div className="activity-chart-total"><small>기간 합계</small><strong>{scoped.length.toLocaleString("ko-KR")}건</strong></div></header>
+      <div className="activity-chart-wrap">
         <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${district} 계약일별 거래 추이`}>
           {dailyTicks.map(count => { const y = chartY(count); return <g className="activity-chart-guide" key={count}><line x1={chartPad.left} x2={chartWidth - chartPad.right} y1={y} y2={y} /><text x={chartPad.left - 11} y={y + 4} textAnchor="end">{count.toLocaleString("ko-KR")}건</text></g>; })}
           {points.length > 1 && <polyline points={points.map(point => `${point.x},${point.y}`).join(" ")} />}
@@ -120,6 +134,10 @@ export default function SeoulActivityMap({ transactions = [], onSelect }) {
         </svg>
         {activePoint && <div className={`activity-chart-tooltip ${activePoint.x < 115 ? "is-left" : activePoint.x > chartWidth - 115 ? "is-right" : ""} ${activePoint.y < 58 ? "is-below" : ""}`} style={{ left: `${(activePoint.x / chartWidth) * 100}%`, top: `${(activePoint.y / chartHeight) * 100}%` }}><strong>{activePoint.date}</strong><b>{activePoint.count.toLocaleString("ko-KR")}건</b><span>{district === "전체" ? "서울 전체" : district} 매매 계약</span></div>}
       </div>
+      {district === "전체" && activePoint && <section className="activity-district-breakdown" aria-live="polite" aria-label={`${activePoint.date} 자치구별 거래 건수`}>
+        <header><div><strong>{activePoint.date} 자치구별 거래</strong><small>거래가 확인된 자치구를 건수순으로 표시합니다.</small></div><b>{activePoint.districts.length.toLocaleString("ko-KR")}개 자치구</b></header>
+        {activePoint.districts.length ? <div>{activePoint.districts.map(item => <button type="button" key={item.name} onClick={() => setDistrict(item.name)} aria-label={`${item.name} 거래 ${item.count}건 추이 보기`}><span>{item.name}</span><strong>{item.count.toLocaleString("ko-KR")}건</strong><i aria-hidden="true">→</i></button>)}</div> : <p>이 날짜에 확인된 매매 계약이 없습니다.</p>}
+      </section>}
     </div>
   </section>;
 }

@@ -10,11 +10,16 @@ test("same apartment names in different districts remain distinct", () => {
   assert.equal(representativeTransactions(rows).length,3);
 });
 test("manual refresh revalidates the saved ledger", async (t) => {
-  t.mock.method(globalThis, "fetch", async (url) => {
-    assert.equal(url,"/api/transactions?full=1&refresh=1");
-    return {ok:true,json:async()=>({data:[],count:0})};
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async (url, options = {}) => {
+    requests.push({ url, options });
+    if (url === "/api/refresh?dataset=transactions") return { ok: true, json: async () => ({ status: "success" }) };
+    return {ok:true,headers:new Headers(),json:async()=>({data:[],count:0})};
   });
   assert.equal((await fetchTransactions(undefined,true)).count,0);
+  assert.equal(requests[0].url, "/api/refresh?dataset=transactions");
+  assert.equal(requests[0].options.method, "POST");
+  assert.equal(requests[1].url, "/api/transactions?full=1&refresh=1");
 });
 test("truncated ledgers are rejected instead of displayed as full totals", async (t) => {
   t.mock.method(globalThis, "fetch", async()=>({ok:true,json:async()=>({data:[{id:"one"}],count:300})}));

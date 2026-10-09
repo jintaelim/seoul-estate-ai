@@ -8,9 +8,10 @@ export function useLatestTransactions(enabled) {
   useEffect(() => {
     if (!enabled) { setLoading(false); return undefined; }
     const controller = new AbortController();
-    setLoading(true);
+    setLoading(true); setError("");
     fetchLatestTransactions(controller.signal).then(payload => setTransactions(payload.data))
-      .catch(reason => setError(reason.message)).finally(() => setLoading(false));
+      .catch(reason => { if (reason.name !== "AbortError") setError(reason.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [enabled]);
   return { transactions, loading, error };

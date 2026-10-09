@@ -2,10 +2,6 @@ import { useEffect, useState } from "react";
 import { Callout } from "@seed-design/react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import Header, { MobileNav } from "./components/Header";
-import Hero from "./components/Hero";
-import QuickAccess from "./components/QuickAccess";
-import HomeSnapshot from "./components/HomeSnapshot";
-import HomeThemes from "./components/HomeThemes";
 import PageHeader from "./components/PageHeader";
 import PropertySearch from "./components/PropertySearch";
 import LoanCalculator from "./components/LoanCalculator";
@@ -23,6 +19,7 @@ import PurchaseFlow from "./components/PurchaseFlow";
 import TransactionsWorkspace from "./components/TransactionsWorkspace";
 import MarketDataNav from "./components/MarketDataNav";
 import RentExplorer from "./components/RentExplorer";
+import HomePage from "./pages/HomePage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -76,7 +73,7 @@ export default function App() {
       <ScrollToTop />
       <Header />
       <Routes>
-        <Route path="/" element={<main className="main home-page"><Hero transactions={latest.transactions} onBudgetSearch={handleBudgetSearch} /><QuickAccess transactions={latest.transactions} />{latest.error && <Callout.Root className="data-callout" tone="warning"><Callout.Content><Callout.Title>최신 거래를 불러오지 못했어요</Callout.Title><Callout.Description>{latest.error}</Callout.Description></Callout.Content></Callout.Root>}<HomeThemes payload={homeThemes.payload} loading={homeThemes.loading} error={homeThemes.error} onSelect={handleSelect} /><HomeSnapshot transactions={latest.transactions} onSelect={handleSelect} /></main>} />
+        <Route path="/" element={<HomePage latest={latest} homeThemes={homeThemes} onBudgetSearch={handleBudgetSearch} onSelect={handleSelect} />} />
         <Route path="/transactions" element={<main className="main route-page"><PageHeader eyebrow="MARKET DATA" title="서울 아파트 거래 데이터" description="매매·전월세·신고가·토지허가 원장을 같은 기준으로 탐색하세요." meta={`${transactions.length.toLocaleString("ko-KR")}건`} /><MarketDataNav />{status}<SeoulActivityMap transactions={transactions} onSelect={handleSelect} /><TransactionsWorkspace transactions={transactions} onSelect={handleSelect} onDistrict={handleDistrict} /></main>} />
         <Route path="/rent" element={<main className="main route-page"><PageHeader eyebrow="MARKET DATA" title="서울 아파트 전월세" description="실제 거래 단지를 선택해 전세 보증금과 월세 계약을 조회합니다." metaLabel="국토부 전월세" meta="최근 3개월" sourceLabel="계약일 기준 · 저장 원장" /><MarketDataNav /><RentExplorer onSelect={handleSelect} /></main>} />
         <Route path="/search" element={<main className="main route-page"><PageHeader eyebrow="APARTMENT FINDER" title="내 조건에 맞는 아파트 찾기" description="최근 매매와 전세를 함께 확인하고 관심 단지를 저장하세요." meta="저장 원장 검색" /><PropertySearch remote transactions={[]} source="cache" initialBudget={budgetSearch} onSelect={handleSelect} /></main>} />

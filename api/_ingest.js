@@ -6,9 +6,28 @@ import { database, databaseConfigured, getLedger, publishLedger, datasets } from
 import { readSnapshot, writeSnapshot } from "./_snapshot.js";
 import { getHomeThemes, storeHomeThemes } from "./_home-themes.js";
 import { enrichTransactionLedgerWithApartmentMetadata } from "./_enrich-apartments.js";
+import { enrichTransactions } from "../transaction-domain.js";
 
 const running = new Map();
 const recent = new Map();
+const rowMonth = row => String(row.dealDate || row.permitDate || "").slice(0, 7).replace("-", "");
+
+export function mergeRollingLedger(previous, fresh, dataset) {
+  if (!previous?.data?.length || !fresh?.coverage?.months?.length) return fresh;
+  const refreshedMonths = new Set(fresh.coverage.months);
+  const retained = previous.data.filter(row => !refreshedMonths.has(rowMonth(row)));
+  let data = [...fresh.data, ...retained];
+  if (dataset === "transactions") data = enrichTransactions(data);
+  else data.sort((a, b) => String(b.dealDate || b.permitDate).localeCompare(String(a.dealDate || a.permitDate)));
+  const months = [...new Set(data.map(rowMonth).filter(Boolean))].sort().reverse();
+  return {
+    ...fresh,
+    data,
+    count: data.length,
+    latestDealDate: data.find(row => row.dealDate)?.dealDate || fresh.latestDealDate,
+    coverage: { ...fresh.coverage, months, refreshMonths: fresh.coverage.months, retainedHistory: retained.length > 0 },
+  };
+}
 async function record(run) {
   recent.set(run.dataset, run);
   await writeSnapshot({ data: [...recent.values()], fetchedAt: new Date().toISOString() }, "sync-status").catch(() => {});
@@ -46,6 +65,10 @@ export async function ingest(dataset) {
       let payload = await (dataset === "transactions" ? collectTransactions()
         : dataset === "rent-transactions" ? collectRents()
           : collectPermits());
+      if (dataset === "transactions" || dataset === "rent-transactions") {
+        const previous = await getLedger(dataset, { refresh: true }).catch(() => null);
+        payload = mergeRollingLedger(previous, payload, dataset);
+      }
       if (dataset === "land-permits") {
         const sales = await getLedger("transactions").catch(() => null);
         if (sales) payload = enrichPermitsWithTransactions(payload, sales);

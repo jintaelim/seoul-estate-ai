@@ -126,8 +126,8 @@ export default function TransactionDialog({ item, transactions, onClose }) {
     const controller = new AbortController();
     setRentError("");
     setRentDeals([]);
-    fetchRentTransactions({ district: item.district, dong: item.dong, complex: item.complex, months: 3 }, controller.signal)
-      .then((payload) => setRentDeals((payload.data ?? []).filter((entry) => entry.area === item.area && entry.monthlyRent === 0).slice(0, 18).reverse()))
+    fetchRentTransactions({ district: item.district, dong: item.dong, complex: item.complex, months: 60 }, controller.signal)
+      .then((payload) => setRentDeals((payload.data ?? []).filter((entry) => entry.area === item.area && entry.monthlyRent === 0).reverse()))
       .catch((error) => { if (error.name !== "AbortError") { setRentDeals([]); setRentError(error.message); } });
     return () => controller.abort();
   }, [item]);
@@ -141,7 +141,7 @@ export default function TransactionDialog({ item, transactions, onClose }) {
     const areaTypes = [...new Set(complexDeals.map((candidate) => candidate.area))].sort((a, b) => a - b);
     return {
       unitDeals,
-      chartDeals: unitDeals.slice(-18),
+      chartDeals: unitDeals,
       recentDeals: [...unitDeals].reverse(),
       previous,
       previousChange: previous ? changeRate(item.price, previous.price) : null,
@@ -189,7 +189,7 @@ export default function TransactionDialog({ item, transactions, onClose }) {
           </section>
 
           <div className="detail-content-grid">
-            <section className="detail-section detail-trend-section"><div className="detail-section-head"><div><span>PRICE TRACE</span><h3>매매·전세 가격 추이</h3></div><p>매매 {detail.chartDeals.length}건 · 전세 {rentDeals.length}건</p></div><TrendChart items={detail.chartDeals} rentItems={rentDeals} />{rentError && <p className="detail-rent-note">{rentError}</p>}</section>
+            <section className="detail-section detail-trend-section"><div className="detail-section-head"><div><span>PRICE TRACE</span><h3>매매·전세 가격 추이</h3></div><p>저장 원장 전체 · 매매 {detail.chartDeals.length}건 · 전세 {rentDeals.length}건</p></div><TrendChart items={detail.chartDeals} rentItems={rentDeals} />{rentError && <p className="detail-rent-note">{rentError}</p>}</section>
             <section className="detail-section detail-facts-section">
               <div className="detail-section-head"><div><span>BUILDING FILE</span><h3>단지·거래 정보</h3></div></div>
               <dl className="detail-facts">

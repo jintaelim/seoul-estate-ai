@@ -83,7 +83,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .hero-submit-inline b{display:grid;place-items:center;width:31px;height:31px;border-radius:8px;background:#ffffff1c}
 
 /* four intent-based entry points */
-.quick-access{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.quick-access{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .quick-card{min-width:0;overflow:hidden;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:17px 18px;background:#fff;border:1px solid var(--div);border-radius:13px;box-shadow:0 2px 10px rgba(23,32,51,.035);transition:border-color .18s,transform .18s,box-shadow .18s}
 .quick-card:hover{transform:translateY(-2px);border-color:#b9c7da;box-shadow:var(--sh)}
 .quick-number{font:750 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#9aa4b4}

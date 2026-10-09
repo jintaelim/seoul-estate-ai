@@ -101,10 +101,11 @@ function normalizeItem(item, district) {
   };
 }
 
-export async function collectTransactions() {
+export async function collectTransactions({ months = 3 } = {}) {
   if (!SERVICE_KEY) throw new Error("MOLIT_API_KEY가 설정되지 않았습니다.");
   const startedAt = new Date().toISOString();
-  const yearMonths = [yearMonth(0), yearMonth(1), yearMonth(2)];
+  const monthCount = Math.min(60, Math.max(1, Number(months) || 3));
+  const yearMonths = Array.from({ length: monthCount }, (_, index) => yearMonth(index));
   const failures = [];
   const tasks = Object.entries(DISTRICT_CODES).flatMap(([district, code]) =>
     yearMonths.map((ym) => async () => {

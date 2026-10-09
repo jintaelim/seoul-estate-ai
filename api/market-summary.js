@@ -19,7 +19,8 @@ export default async function handler(req, res) {
   if (!guardReadRequest(req, res)) return;
   if (req.query?.view === "home-themes") {
     try {
-      const payload = await readStoredHomeThemes() || await getHomeThemes();
+      const stored = await readStoredHomeThemes();
+      const payload = stored?.version === 2 ? stored : await getHomeThemes();
       return sendJson(req, res, payload, { browser: 300, edge: 21600, stale: 86400 });
     }
     catch (error) { noStore(res); return res.status(503).json({ error: error.message }); }

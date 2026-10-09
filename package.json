@@ -5,6 +5,7 @@
   "scripts": {
     "ingest": "node scripts/ingest.mjs",
     "publish:snapshot": "node scripts/publish-snapshot.mjs",
+    "backfill:history": "node scripts/backfill-history.mjs --months=24",
     "dev": "concurrently -k \"node --watch server.js\" \"vite\" \"node --watch scripts/worker.mjs\"",
     "dev:web": "concurrently -k \"node --watch server.js\" \"vite\"",
     "worker": "node scripts/worker.mjs",

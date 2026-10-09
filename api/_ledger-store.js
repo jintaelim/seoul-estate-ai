@@ -59,13 +59,99 @@ export async function getLedger(dataset, { refresh = false } = {}) {
   return pending;
 }
 
+const ledgerMetadata = value => {
+  const { data, warning, persistence, ...metadata } = value;
+  return metadata;
+};
+
+async function writeLedgerHeader(dataset, value, count = value.count) {
+  const metadata = { ...ledgerMetadata(value), count };
+  await database("estate_ledgers?on_conflict=dataset", {
+    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({
+      dataset, metadata,
+      started_at: value.startedAt || value.fetchedAt,
+      fetched_at: value.fetchedAt,
+    }),
+  });
+}
+
+async function insertLedgerRows(dataset, rows, ordinalOffset = 0) {
+  const chunks = [];
+  for (let offset = 0; offset < rows.length; offset += 2000) {
+    chunks.push(rows.slice(offset, offset + 2000).map((payload, index) => ({
+      dataset, ordinal: ordinalOffset + offset + index + 1, payload,
+    })));
+  }
+  const insertBatch = async batch => {
+    try {
+      await database("estate_ledger_rows", {
+        method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=minimal" }, body: JSON.stringify(batch), timeoutMs: 120000,
+      });
+    } catch (error) {
+      if (!/\(57014\)/.test(error.message) || batch.length <= 100) throw error;
+      const middle = Math.ceil(batch.length / 2);
+      await insertBatch(batch.slice(0, middle));
+      await insertBatch(batch.slice(middle));
+    }
+  };
+  for (let index = 0; index < chunks.length; index += 2) {
+    await Promise.all(chunks.slice(index, index + 2).map(insertBatch));
+  }
+}
+
+export async function resumeLedgerUpload(dataset, value) {
+  if (!databaseConfigured()) throw new Error("운영 DB 설정이 필요합니다.");
+  const progress = await database(`estate_ledger_rows?dataset=eq.${encodeURIComponent(dataset)}&select=ordinal&order=ordinal.desc&limit=1`);
+  const summary = await database("rpc/read_estate_ledger_filtered", { method: "POST", body: JSON.stringify({
+    p_dataset: dataset, p_offset: 0, p_limit: 1,
+  }) });
+  const maxOrdinal = Number(progress?.[0]?.ordinal || 0);
+  const existingCount = Number(summary?.totalCount || 0);
+  const contiguous = maxOrdinal === existingCount;
+  const offset = contiguous ? existingCount : 0;
+  await insertLedgerRows(dataset, value.data.slice(offset), offset);
+  const verified = await database("rpc/read_estate_ledger_filtered", { method: "POST", body: JSON.stringify({
+    p_dataset: dataset, p_offset: 0, p_limit: 1,
+  }) });
+  if (Number(verified?.totalCount || 0) !== value.count) throw new Error(`원장 게시 건수 불일치: ${verified?.totalCount || 0}/${value.count}`);
+  await writeLedgerHeader(dataset, value);
+  return { count: value.count, resumedFrom: offset };
+}
+
+async function replaceLedgerDirect(dataset, value) {
+  // The header must exist before row inserts because rows reference it.
+  await writeLedgerHeader(dataset, value);
+  await database(`estate_ledger_rows?dataset=eq.${encodeURIComponent(dataset)}`, { method: "DELETE", timeoutMs: 120000 });
+  await insertLedgerRows(dataset, value.data);
+  await writeLedgerHeader(dataset, value);
+}
+
+async function replaceRollingMonths(dataset, value) {
+  const months = value.coverage.refreshMonths;
+  const from = [...months].sort()[0];
+  const cutoff = `${from.slice(0, 4)}-${from.slice(4, 6)}-01`;
+  const allowed = new Set(months);
+  const freshRows = value.data.filter(row => allowed.has(String(row.dealDate || "").slice(0, 7).replace("-", "")));
+  await database(`estate_ledger_rows?dataset=eq.${encodeURIComponent(dataset)}&contract_date=gte.${cutoff}`, { method: "DELETE", timeoutMs: 120000 });
+  // A reserved high ordinal range avoids collisions with retained historical rows.
+  await insertLedgerRows(dataset, freshRows, 1_000_000_000);
+  const result = await database("rpc/read_estate_ledger_filtered", { method: "POST", body: JSON.stringify({
+    p_dataset: dataset, p_offset: 0, p_limit: 1,
+  }) });
+  await writeLedgerHeader(dataset, value, Number(result?.totalCount || value.count));
+}
+
 export async function publishLedger(dataset, value) {
   if (!validSnapshot(value)) throw new Error("불완전한 원장은 게시하지 않습니다.");
   const snapshot = { ...value, persistence: { persisted: false, local: false } };
   let storageWarning;
   if (databaseConfigured()) {
     try {
-      if (value.count > 5000) {
+      if (value.coverage?.refreshMonths?.length && value.count > 5000) {
+        await replaceRollingMonths(dataset, value);
+      } else if (value.count > 75000) {
+        await replaceLedgerDirect(dataset, value);
+      } else if (value.count > 5000) {
         const runId = randomUUID();
         const chunks = [];
         for (let offset = 0; offset < value.data.length; offset += 2000) {
@@ -85,7 +171,8 @@ export async function publishLedger(dataset, value) {
           }) });
         } catch (error) {
           await database(`estate_ledger_staging?run_id=eq.${runId}`, { method: "DELETE" }).catch(() => {});
-          throw error;
+          if (!/\(57014\)/.test(error.message)) throw error;
+          await replaceLedgerDirect(dataset, value);
         }
       } else {
         await database("rpc/publish_estate_ledger", { method: "POST", body: JSON.stringify({ p_dataset: dataset, p_payload: value }) });

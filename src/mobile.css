@@ -124,8 +124,16 @@
   .purchase-page-footer button { min-height: 48px; }
   .hero-title { font-size: 30px; line-height: 1.35; }
   .hero-top { padding: 26px 20px 18px; }
+  .hero-search-bar { grid-template-columns: minmax(0, 1fr); }
+  .hero-search-bar .district-segment,
+  .hero-search-bar .hero-submit-inline { grid-column: 1; width: 100%; }
   .journey-access .quick-card { min-height: 82px; }
-  .home-snapshot > header { align-items: flex-start; }
+  .home-snapshot > header,
+  .market-signals-intro { align-items: flex-start; flex-direction: column; }
+  .snapshot-date,
+  .market-signals-intro > strong { justify-items: start; }
+  .contract-tape-ledger button { grid-template-columns: minmax(0, 1fr) minmax(96px, auto); }
+  .contract-tape-ledger button > span:last-child { min-width: 96px; }
   .snapshot-list button { min-height: 68px; padding-block: 14px; }
 }
 @media (max-width: 374px) {

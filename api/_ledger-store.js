@@ -132,13 +132,16 @@ async function replaceRollingMonths(dataset, value) {
   const cutoff = `${from.slice(0, 4)}-${from.slice(4, 6)}-01`;
   const allowed = new Set(months);
   const freshRows = value.data.filter(row => allowed.has(String(row.dealDate || "").slice(0, 7).replace("-", "")));
+  const headers = await database(`estate_ledgers?dataset=eq.${encodeURIComponent(dataset)}&select=metadata&limit=1`);
+  const oldCount = Number(headers?.[0]?.metadata?.count || 0);
+  const replaced = await database("rpc/read_estate_ledger_filtered", { method: "POST", body: JSON.stringify({
+    p_dataset: dataset, p_from: cutoff, p_offset: 0, p_limit: 1,
+  }) });
   await database(`estate_ledger_rows?dataset=eq.${encodeURIComponent(dataset)}&contract_date=gte.${cutoff}`, { method: "DELETE", timeoutMs: 120000 });
   // A reserved high ordinal range avoids collisions with retained historical rows.
   await insertLedgerRows(dataset, freshRows, 1_000_000_000);
-  const result = await database("rpc/read_estate_ledger_filtered", { method: "POST", body: JSON.stringify({
-    p_dataset: dataset, p_offset: 0, p_limit: 1,
-  }) });
-  await writeLedgerHeader(dataset, value, Number(result?.totalCount || value.count));
+  const total = Math.max(0, oldCount - Number(replaced?.totalCount || 0) + freshRows.length);
+  await writeLedgerHeader(dataset, value, total);
 }
 
 export async function publishLedger(dataset, value) {

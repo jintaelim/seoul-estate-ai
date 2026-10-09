@@ -66,8 +66,12 @@ export async function ingest(dataset) {
         : dataset === "rent-transactions" ? collectRents()
           : collectPermits());
       if (dataset === "transactions" || dataset === "rent-transactions") {
-        const previous = await getLedger(dataset, { refresh: true }).catch(() => null);
-        payload = mergeRollingLedger(previous, payload, dataset);
+        if (databaseConfigured()) {
+          payload = { ...payload, coverage: { ...payload.coverage, refreshMonths: payload.coverage.months, retainedHistory: true } };
+        } else {
+          const previous = await getLedger(dataset, { refresh: true }).catch(() => null);
+          payload = mergeRollingLedger(previous, payload, dataset);
+        }
       }
       if (dataset === "land-permits") {
         const sales = await getLedger("transactions").catch(() => null);

@@ -16,7 +16,7 @@ export async function fetchTransactions(signal, refresh = false) {
   if (refresh) {
     const response = await fetch("/api/refresh?dataset=transactions", { method: "POST", cache: "no-store", signal });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || `원장 수집 ${response.status}`);
+    if (!response.ok && response.status !== 404) throw new Error(result.error || `원장 수집 ${response.status}`);
   }
   const payload = await readSaved(`/api/transactions?full=1${refresh ? "&refresh=1" : ""}`, signal);
   if (!Array.isArray(payload.data)) throw new Error("실거래 응답 형식이 올바르지 않습니다.");

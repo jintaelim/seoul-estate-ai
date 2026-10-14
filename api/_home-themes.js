@@ -1,4 +1,4 @@
-import { database, databaseConfigured, getLedger, readFilteredLedger } from "./_ledger-store.js";
+import { database, databaseConfigured, getLedger, readFilteredLedger, readRecentLedger } from "./_ledger-store.js";
 
 const DAY = 86400000;
 const complexKey = row => `${row.district}|${row.dong}|${row.complex}`;
@@ -22,6 +22,7 @@ async function readRange(dataset, from) {
     const ledger = await getLedger(dataset);
     return ledger.data.filter(row => (row.dealDate || row.permitDate || "") >= from);
   }
+  if (dataset !== "land-permits") return (await readRecentLedger(dataset)).data;
   const first = await readFilteredLedger(dataset, { from, page: 1, limit: 200 });
   const pages = Math.ceil(Number(first.totalCount || first.data?.length || 0) / 200);
   const rows = [...(first.data || [])];
@@ -172,8 +173,8 @@ export function buildHomeThemes(sales, rents, latestDealDate, permits = []) {
 export async function getHomeThemes() {
   let latestDealDate = "";
   if (databaseConfigured()) {
-    const summary = await database("rpc/summarize_estate_ledger", { method: "POST", body: JSON.stringify({ p_dataset: "transactions" }) });
-    latestDealDate = summary?.latestDealDate || "";
+    const headers = await database("estate_ledgers?dataset=eq.transactions&select=metadata&limit=1");
+    latestDealDate = headers?.[0]?.metadata?.latestDealDate || "";
   } else {
     latestDealDate = (await getLedger("transactions")).latestDealDate || "";
   }

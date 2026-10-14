@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import districtsGeo from "../data/seoul-districts.json";
 import { latestDate } from "../utils";
 
@@ -48,6 +48,13 @@ function countGroups(items, keyOf) {
 }
 
 export default function SeoulActivityMap({ transactions = [], onSelect }) {
+  const chartRef = useRef(null);
+  const [chartWidth, setChartWidth] = useState(720);
+  useEffect(() => {
+    const observer = new ResizeObserver(([entry]) => setChartWidth(Math.max(260, Math.round(entry.contentRect.width))));
+    if (chartRef.current) observer.observe(chartRef.current);
+    return () => observer.disconnect();
+  }, []);
   const latest = latestDate(transactions);
   const [period, setPeriod] = useState("30");
   const [district, setDistrict] = useState("전체");
@@ -86,7 +93,7 @@ export default function SeoulActivityMap({ transactions = [], onSelect }) {
     });
   }, [scoped, latest, period]);
   const maxDaily = Math.max(1, ...daily.map(item => item.count));
-  const chartWidth = 720; const chartHeight = 180; const chartPad = { left: 52, right: 24, top: 20, bottom: 30 };
+  const chartHeight = 220; const chartPad = { left: 52, right: 24, top: 20, bottom: 30 };
   const chartBase = chartHeight - chartPad.bottom;
   const chartRange = chartHeight - chartPad.top - chartPad.bottom;
   const chartX = index => chartPad.left + (index / Math.max(1, daily.length - 1)) * (chartWidth - chartPad.left - chartPad.right);
@@ -124,9 +131,9 @@ export default function SeoulActivityMap({ transactions = [], onSelect }) {
       </aside>
     </div>
     <div className="activity-chart">
-      <header><div><span>CONTRACT TREND</span><h3>{district === "전체" ? "서울 전체" : district} 계약일별 거래 추이</h3><p>날짜를 가리키면 일자 합계와 자치구별 매매 계약 건수를 함께 확인할 수 있습니다.</p></div><div className="activity-chart-total"><small>기간 합계</small><strong>{scoped.length.toLocaleString("ko-KR")}건</strong></div></header>
-      <div className="activity-chart-wrap">
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label={`${district} 계약일별 거래 추이`}>
+      <header><div><span>CONTRACT TREND</span><h3>{district === "전체" ? "서울 전체" : district} 계약일별 거래 추이</h3><p>날짜를 누르거나 가리키면 거래 건수와 자치구별 내역을 확인할 수 있습니다.</p></div><div className="activity-chart-total"><small>기간 합계</small><strong>{scoped.length.toLocaleString("ko-KR")}건</strong></div></header>
+      <div className="activity-chart-wrap" ref={chartRef}>
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ aspectRatio: `${chartWidth} / ${chartHeight}` }} role="img" aria-label={`${district} 계약일별 거래 추이`}>
           {dailyTicks.map(count => { const y = chartY(count); return <g className="activity-chart-guide" key={count}><line x1={chartPad.left} x2={chartWidth - chartPad.right} y1={y} y2={y} /><text x={chartPad.left - 11} y={y + 4} textAnchor="end">{count.toLocaleString("ko-KR")}건</text></g>; })}
           {points.length > 1 && <polyline points={points.map(point => `${point.x},${point.y}`).join(" ")} />}
           {points.map(point => <g className={activeDay === point.index ? "active" : ""} key={point.date}><circle cx={point.x} cy={point.y} r={point.count ? (activeDay === point.index ? 5 : 3.5) : 0} /><rect className="activity-chart-hit" x={point.x - dayHitWidth / 2} y={chartPad.top} width={dayHitWidth} height={chartBase - chartPad.top} tabIndex="0" role="button" aria-label={`${point.date} 매매 계약 ${point.count}건`} onPointerDown={() => setActiveDay(point.index)} onPointerEnter={() => setActiveDay(point.index)} onFocus={() => setActiveDay(point.index)} onClick={() => setActiveDay(point.index)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setActiveDay(point.index); } }} /></g>)}

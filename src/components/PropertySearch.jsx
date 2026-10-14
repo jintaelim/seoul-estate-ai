@@ -127,8 +127,8 @@ export default function PropertySearch({ transactions, source, initialBudget, on
             {item.approvedPermitCount > 0 && <i className="permit">허가 {item.approvedPermitCount}건</i>}
           </span><span className="mobile-badges">{isRecord(item) && <i className="status-tag record">신고가</i>}{item.latestJeonse > 0 && <i className="status-tag rent">전세 확인</i>}{item.permitCount > 0 && <i className="status-tag permit">토허</i>}</span></span>
           <span><strong>{formatHousingArea(item)}</strong><small>{item.floor}층{!item.supplyArea ? " · 전용률 82.5% 기준" : ""}</small></span>
-          <span><strong>{item.latestJeonse ? formatPrice(item.latestJeonse) : "전세 없음"}</strong><small>{item.latestJeonse ? `전세가율 ${item.jeonseRatio}% · 차액 ${formatPrice(item.gapAmount)}` : `전용평당 ${formatPrice(Math.round(pricePerPyeong(item)))}`}</small></span>
-          <span className="price-cell"><strong>{formatPrice(item.price)}</strong><small>{item.dealDate} 매매 계약</small></span>
+          <span><span className="mobile-price-label">전세 보증금</span><strong>{item.latestJeonse ? formatPrice(item.latestJeonse) : "전세 없음"}</strong><small>{item.latestJeonse ? `전세가율 ${item.jeonseRatio}% · 차액 ${formatPrice(item.gapAmount)}` : `전용평당 ${formatPrice(Math.round(pricePerPyeong(item)))}`}</small></span>
+          <span className="price-cell"><span className="mobile-price-label">매매 계약 금액</span><strong>{formatPrice(item.price)}</strong><small>{item.dealDate} 매매 계약</small></span>
         </button>
         <button className={`finder-save ${isSaved ? "saved" : ""}`} type="button" onClick={() => toggleSaved(item)} aria-pressed={isSaved} aria-label={`${item.complex} ${isSaved ? "저장 해제" : "후보 저장"}`}><span className="finder-save-icon" aria-hidden="true">{isSaved ? "✓" : "＋"}</span><span>{isSaved ? "저장됨" : "저장"}</span></button>
       </article>;

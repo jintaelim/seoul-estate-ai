@@ -43,8 +43,7 @@ export default function App() {
   const handleSelect = (item) => {
     setSelected(item);
     const available = transactions.filter(candidate => candidate.district === item.district && candidate.dong === item.dong && candidate.complex === item.complex);
-    if (available.length) { setDetailTransactions(available); return; }
-    setDetailTransactions([item]);
+    setDetailTransactions(available.length ? available : [item]);
     const controller = new AbortController();
     fetchComplexTransactions(item, controller.signal).then(rows => {
       if (!rows.length) return;

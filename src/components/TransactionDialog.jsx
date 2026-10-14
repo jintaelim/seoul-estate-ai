@@ -21,11 +21,18 @@ const nicePriceStep = (span) => {
 
 function TrendChart({ items, rentItems = [] }) {
   const [active, setActive] = useState(null);
+  const canvasRef = useRef(null);
+  const [width, setWidth] = useState(720);
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(260, Math.round(entry.contentRect.width))));
+    observer.observe(canvasRef.current);
+    return () => observer.disconnect();
+  }, [items.length, rentItems.length]);
   if (!items.length && !rentItems.length) {
     return <div className="detail-chart-empty"><span>—</span><p>동일 면적 거래가 더 쌓이면 가격 추이를 보여드립니다.</p></div>;
   }
 
-  const width = 720;
   const height = 260;
   const plot = { left: 92, right: 24, top: 36, bottom: 54 };
   const prices = [...items.map((entry) => entry.price), ...rentItems.map((entry) => entry.deposit).filter(Boolean)];
@@ -66,8 +73,9 @@ function TrendChart({ items, rentItems = [] }) {
         <span className="sale"><i />최근 매매 <strong>{points.length ? formatPrice(points.at(-1).price) : "없음"}</strong></span>
         <span className="rent"><i />최근 전세 <strong>{rentPoints.length ? formatPrice(rentPoints.at(-1).deposit) : "없음"}</strong></span>
       </div>
-      <div className="detail-chart-canvas">
-        <svg className="detail-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${items.length}건의 동일 면적 실거래 가격 추이`}>
+      <p className="mobile-chart-hint">거래 지점을 누르면 날짜와 금액을 확인할 수 있어요.</p>
+      <div className="detail-chart-canvas" ref={canvasRef}>
+        <svg className="detail-chart" viewBox={`0 0 ${width} ${height}`} style={{ aspectRatio: `${width} / ${height}` }} role="img" aria-label={`${items.length}건의 동일 면적 실거래 가격 추이`}>
         <defs><linearGradient id="transactionArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1769e0" stopOpacity=".2" /><stop offset="100%" stopColor="#1769e0" stopOpacity="0" /></linearGradient></defs>
         {ticks.map((tick, index) => {
           const y = yFor(tick);
@@ -104,6 +112,13 @@ export default function TransactionDialog({ item, transactions, onClose }) {
     setCompareMonth(item?.dealDate.slice(0, 7) ?? "");
     setCompareArea("all");
   }, [item]);
+
+  useEffect(() => {
+    if (!item) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [Boolean(item)]);
 
   useEffect(() => {
     const dialog = ref.current;

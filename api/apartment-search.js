@@ -115,7 +115,7 @@ export default async function handler(req, res) {
       || number(query.maxGap) || number(query.minJeonseRatio) || number(query.minRentTrades) || number(query.maxRentAge)
       || query.dealType !== "all" || query.quality !== "all" || query.permit !== "all"
       || ["liquidity", "discount", "gap"].includes(query.sort);
-    if (hasExtendedFilter) return sendJson(req, res, await localSearch(query), { browser: 30, edge: 300, stale: 3600 });
+    if (hasExtendedFilter || databaseConfigured()) return sendJson(req, res, await localSearch(query), { browser: 30, edge: 300, stale: 3600 });
     if (databaseConfigured()) {
       try {
         const remote = await database("rpc/search_estate_apartments", {

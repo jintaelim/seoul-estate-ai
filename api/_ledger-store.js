@@ -195,6 +195,23 @@ export async function publishLedger(dataset, value) {
   return snapshot;
 }
 
+// Read bounded indexed pages instead of aggregating the entire history in SQL.
+export async function readRecentLedger(dataset, days = 90) {
+  const headers = await database(`estate_ledgers?dataset=eq.${encodeURIComponent(dataset)}&select=metadata&limit=1`);
+  const metadata = headers?.[0]?.metadata;
+  if (!metadata?.latestDealDate) throw new Error("저장 원장의 최신 계약일을 확인할 수 없습니다.");
+  const from = new Date(Date.parse(`${metadata.latestDealDate}T00:00:00Z`) - (days - 1) * 86400000).toISOString().slice(0, 10);
+  const data = [];
+  for (let offset = 0; ; offset += 4000) {
+    const pages = await Promise.all(Array.from({ length: 4 }, (_, index) => database(
+      `estate_ledger_rows?dataset=eq.${encodeURIComponent(dataset)}&contract_date=gte.${from}&select=payload&order=contract_date.desc,ordinal.asc&limit=1000&offset=${offset + index * 1000}`)));
+    for (const page of pages) data.push(...page.map(row => row.payload));
+    if (pages.some(page => page.length < 1000)) break;
+  }
+  return { ...metadata, data, count: data.length, historyCount: metadata.count,
+    coverage: { ...metadata.coverage, from, days, scope: "recent-contracts" } };
+}
+
 export async function readFilteredLedger(dataset, query) {
   const page = Number(query.page || 1), limit = Number(query.limit || 50);
   if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(limit) || limit < 1 || limit > 200) throw new Error("페이지는 1 이상, 페이지 크기는 1~200이어야 합니다.");
@@ -255,7 +272,9 @@ export async function serveLedger(dataset, req, res) {
         if (process.env.VERCEL) throw error;
       }
     }
-    const value = await getLedger(dataset, { refresh: req.query?.refresh === "1" });
+    const value = databaseConfigured() && fullRequested && dataset === "transactions"
+      ? await readRecentLedger(dataset)
+      : await getLedger(dataset, { refresh: req.query?.refresh === "1" });
     let selected;
     try { selected = selectLedger(value, query); }
     catch (error) { return res.status(400).json({ error: error.message }); }
